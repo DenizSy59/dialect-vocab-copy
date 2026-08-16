@@ -265,6 +265,80 @@ All of this is whisper small. large-v3 should do better, especially on the
 dialect clip, and none of these observations should be reported before it is
 re-run on the 4090.
 
+### Accuracy measurement — the research component
+
+Everything above measures coverage. Coverage is the easy question. Built the
+evaluation harness for the real one: **do the errors land on the words learners
+actually need?**
+
+`evaluate.py` runs the pipeline over a test set with reference transcripts,
+then aligns reference against hypothesis token by token and attributes every
+substitution and deletion to whether the *reference* token was a content word
+(noun, verb, adjective, adverb — flashcard material) or a function word
+(particles, endings — not).
+
+Headline metric is the **concentration ratio**: share of errors landing on
+content words, divided by content words' share of all tokens. 1.0 means errors
+are spread evenly. Above 1.0 means they cluster on exactly the words a learner
+would save.
+
+Supporting work this needed:
+
+- `pipeline.py` — pulled the pipeline out of `transcribe.py` into an object that
+  loads whisper and the aligner once and then handles many files. Reloading
+  models per clip made a sweep take longer than the sweep. Also roughly the
+  shape the queue worker wants later.
+- Script normalisation with opencc, defaulting to simplified, applied per
+  segment. Without it the Chinese numbers are meaningless, since half the
+  output was traditional against simplified references.
+- Test set grown from 3 to 20 clips per language.
+
+### Results: 20 FLEURS clips per language, four model sizes
+
+| lang | model | CER | content err | function err | ratio | **concentration** | xRT |
+|---|---|---|---|---|---|---|---|
+| ko | tiny | 0.185 | 0.267 | 0.111 | 2.4 | **1.45** | 0.24 |
+| ko | base | 0.115 | 0.178 | 0.052 | 3.4 | **1.59** | 0.33 |
+| ko | small | 0.100 | 0.101 | 0.019 | 5.2 | **1.74** | 0.53 |
+| ko | medium | 0.079 | 0.074 | 0.008 | 8.9 | **1.88** | 1.02 |
+| zh | tiny | 0.224 | 0.335 | 0.196 | 1.7 | 1.18 | 0.15 |
+| zh | base | 0.165 | 0.210 | 0.188 | 1.1 | 1.04 | 0.24 |
+| zh | small | 0.093 | 0.103 | 0.105 | 1.0 | 0.99 | 0.37 |
+| zh | medium | 0.035 | 0.027 | 0.023 | 1.2 | 1.06 | 1.03 |
+
+**Korean: the concentration rises monotonically as the model gets better** —
+1.45, 1.59, 1.74, 1.88. Function-word errors nearly vanish between tiny and
+medium (0.111 → 0.008, a 14x improvement) while content-word errors improve only
+3.6x (0.267 → 0.074). By medium, a content word is **8.9 times** more likely to
+be wrong than a function word.
+
+That is the interesting result, and it is the opposite of the reassuring story.
+A better model does not make the problem go away for a language learner; it
+concentrates the residual errors more tightly onto the words they came for.
+
+**Chinese shows no such effect** — concentration sits near 1.0 at every size.
+Errors are spread evenly across word types.
+
+Not concluding why. A plausible reading is that Korean function morphemes are
+predictable from context so the language model repairs them, while content words
+carry the information and cannot be guessed — and that Chinese errors are
+homophone substitutions that hit any word type equally. That is a hypothesis,
+not a finding, and it needs someone who speaks the languages to assess.
+
+### Caveats on the numbers above, before anyone quotes them
+
+- 20 clips per language of **read studio speech**. Small, and the easy condition.
+- Chinese content/function classification comes from jieba POS tags, which are
+  cruder than kiwi's. The earlier 一起-as-numeral case shows the filter is
+  imperfect, so the Chinese null result may be partly a measurement artefact
+  rather than a fact about the language. Worth checking before relying on it.
+- Numbers are not normalised (이백만 vs 200만), so all error rates are
+  pessimistic. Pessimistic is the safer direction, but it is not neutral.
+- Still no large-v3.
+
+Speed note: medium runs at 1.0x realtime on the Mac, so a 40-minute video is
+about 40 minutes. Usable but no longer comfortable.
+
 ### Still open
 
 - Everything above re-run on large-v3 on the 4090. Nothing here is reportable
