@@ -199,10 +199,78 @@ error, but both will inflate word error rate unless the comparison normalises
 text first. Anything that computes WER later has to handle this or the numbers
 will be wrong in our favour and then wrong against us.
 
+### Second test set: spontaneous speech and video
+
+FLEURS is read speech, which cannot answer open question 1. Pulled five freely
+licensed videos from Wikimedia Commons to get the opposite condition —
+spontaneous speech, background noise, and actual video files so the clip
+feature has something to cut. `fetch_commons.py` downloads them and writes a
+manifest with author and licence, because these are CC BY / CC BY-SA and
+**attribution is required in the report**.
+
+| file | condition | length |
+|---|---|---|
+| 손호준 인터뷰 | studio, two speakers | 61 s |
+| 정성규 선수 인터뷰 | post-match | 85 s |
+| 정희웅 그라운드 인터뷰 | pitchside, crowd noise | 53 s |
+| C919 뉴스 | news plus street interviews | 169 s |
+| Solomon speaking 湖口话 | Chinese dialect | 418 s |
+
+No reference transcripts, so these give coverage and clips but not error rates.
+FLEURS stays the source for accuracy.
+
+### Open question 1 — answered, provisionally
+
+Word timing coverage on spontaneous speech, whisper small:
+
+| clip | all tokens | content words |
+|---|---|---|
+| 손호준 | 100% | 100% (106) |
+| 정성규 | 100% | 100% (179) |
+| 정희웅 (crowd noise) | 100% | 100% (74) |
+| C919 | 99.1% | 100% (289) |
+| 湖口话 | 96.4% | 100% (457) |
+
+Everything clears the 90% threshold, and content-word coverage is 100% on all
+five. Noise and spontaneity did not break alignment. **Clips will not cut
+mid-word for lack of timings**, so the feature stands as designed.
+
+Speed on the Mac holds up at 0.35–0.50x realtime, so a 40-minute video would be
+roughly 15 minutes of CPU here. Comfortably usable for development.
+
+### The catch, restated
+
+Coverage is now answered and it is not the interesting number. Every one of
+those clips is 100% covered and several are substantially wrong.
+
+Korean, 정희웅 (pitchside): grammar is clean, content words are not —
+수비수→수위수, 태클→탁크, 침착하게→첨착하게, 헌신→형신, plus what looks like an
+invented "포천 스튜디오". Same shape as the FLEURS errors.
+
+Chinese, 湖口话: much worse. 方言 (dialect) comes out as 谎言 (lie) repeatedly,
+語言學的本科 becomes 医院学的奔课, 大学 becomes 大火, and the name of the dialect
+itself appears as 武后娃, 五侯瓦 and 武後 in three different places. Coverage 96.4%,
+usability close to zero.
+
+That clip is the whole argument in one file: alignment succeeded completely
+while transcription failed, so a coverage number on its own tells a learner
+nothing about whether the subtitle is safe to learn from.
+
+**Traditional/simplified is worse than first thought.** The dialect clip
+switches script *mid-transcript* — segments 1 and 5 simplified, 2 to 4
+traditional. So normalisation is not a per-video setting, it has to run per
+segment or per token.
+
+All of this is whisper small. large-v3 should do better, especially on the
+dialect clip, and none of these observations should be reported before it is
+re-run on the 4090.
+
 ### Still open
 
-- Fast dialogue coverage — the actual open question 1. Needs real clips.
-- Everything above re-run on large-v3 on the 4090.
+- Everything above re-run on large-v3 on the 4090. Nothing here is reportable
+  until then.
+- Drama dialogue specifically. Interviews are spontaneous but one speaker at a
+  time; overlapping drama dialogue is still untested.
 - Whether the Korean lemmas and the error judgements above are correct. Needs
   a human who speaks the language.
 - Target Chinese script (simplified or traditional) before writing normalisation.
