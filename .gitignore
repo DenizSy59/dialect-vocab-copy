@@ -19,11 +19,14 @@ build/
 .cache/
 models/
 
-# Media and pipeline output — big, regenerable, never committed
+# Media and pipeline output — big, regenerable, never committed.
+# Corpora are downloaded by scripts, so the manifest is enough to reproduce.
 ml/data/samples/*
 !ml/data/samples/.gitkeep
+ml/data/fleurs/
 ml/out/*
 !ml/out/.gitkeep
+!ml/out/*.manifest.json
 *.mp4
 *.mkv
 *.wav
