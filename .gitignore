@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+build/
+.env
+.env.local
+
+# Model weights and caches
+*.pt
+*.bin
+.cache/
+models/
+
+# Media and pipeline output — big, regenerable, never committed
+ml/data/samples/*
+!ml/data/samples/.gitkeep
+ml/out/*
+!ml/out/.gitkeep
+*.mp4
+*.mkv
+*.wav
+*.mp3
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
