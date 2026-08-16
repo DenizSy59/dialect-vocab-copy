@@ -1,9 +1,35 @@
+import { useState } from "react";
 import { api } from "../api.js";
 
 // Below this, the aligner was much less sure about the word. In the Korean
 // test clips the mis-transcribed words scored 0.30 to 0.56 while correct ones
 // sat at 0.74 and above, so a warning here is worth more than it costs.
 const LOW_CONFIDENCE = 0.65;
+
+// The clip is the thing that makes this different from a screenshot-and-audio
+// tool, so it is loaded on demand rather than never: the first click cuts it
+// server side, which takes a moment on a long source.
+function ClipPlayer({ wordId }) {
+  const [open, setOpen] = useState(false);
+
+  if (!open) {
+    return (
+      <button style={{ marginTop: 8, width: "100%" }} onClick={() => setOpen(true)}>
+        ▶ Play clip
+      </button>
+    );
+  }
+  return (
+    <video
+      className="clip"
+      src={api.clipUrl(wordId)}
+      controls
+      autoPlay
+      playsInline
+      onError={() => setOpen(false)}
+    />
+  );
+}
 
 export function SavedWords({ words, onChanged, videoId }) {
   return (
@@ -44,6 +70,7 @@ export function SavedWords({ words, onChanged, videoId }) {
                 mis-transcribed
               </div>
             )}
+            <ClipPlayer wordId={w._id} />
           </div>
         ))}
 

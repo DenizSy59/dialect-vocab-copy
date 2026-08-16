@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Optional
 
 from lemmatise import get_tokeniser, Token
+from difficulty import score_all
 
 
 def pick_device(requested: str = "auto") -> tuple[str, str]:
@@ -223,6 +224,11 @@ class Pipeline:
                           for w in words],
                 "tokens": [t.to_dict() for t in tokens],
             })
+
+        # Difficulty needs the finished tokens, so it runs after the loop rather
+        # than inside it. Cheap compared to everything above — a dictionary
+        # lookup per content word.
+        score_all(segments, self.language)
 
         def pct(n, d):
             return round(100.0 * n / d, 1) if d else 0.0

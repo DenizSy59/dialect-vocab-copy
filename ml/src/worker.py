@@ -87,7 +87,7 @@ def store_result(video_id, result: dict) -> None:
                 }
                 for t in seg["tokens"]
             ],
-            "difficulty": None,
+            "difficulty": seg.get("difficulty"),
         })
     if docs:
         db.segments.insert_many(docs)

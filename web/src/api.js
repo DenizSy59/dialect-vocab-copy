@@ -57,6 +57,8 @@ export const api = {
 
   deleteWord: (id) => fetch(`/api/words/${id}`, { method: "DELETE" }).then(json),
 
+  clipUrl: (wordId) => `/api/words/${wordId}/clip`,
+
   exportUrl: (videoId) =>
     `/api/words/export${videoId ? `?videoId=${videoId}` : ""}`,
 };

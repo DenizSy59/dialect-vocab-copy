@@ -405,6 +405,59 @@ Not fixed. Options are a proper-noun merge pass over adjacent NNP tokens, or
 letting the user extend a selection. Needs a decision, and a Korean speaker
 should look at how often it actually misfires before either is built.
 
+### Both distinguishing features now exist
+
+The brief names two things that separate this from Language Reactor and Migaku.
+Both are now built and working.
+
+**Video clips on saved words.** `clips.js` cuts the sentence a word came from
+with ffmpeg, on demand at first play rather than upfront — most saved words
+never get played, and pre-cutting every sentence of a long video would be waste.
+Re-encoded rather than stream-copied: stream copy snaps the cut to the nearest
+keyframe, which can be seconds away, and for a one second clip that is the
+difference between the right sentence and the wrong one.
+
+Measured: 0.25 s to cut and serve, 168 KB, h264 1080p with aac, 1.2 s for a
+0.7 s sentence plus padding. Fast enough that on-demand feels instant.
+
+**Difficulty scoring and the colour strip.** `difficulty.py` scores each segment
+0–1 from speech rate (characters per second), rarity of its content words
+(wordfreq's zipf scale), and content density. Rarity is weighted highest at 0.50
+because it is the factor specific to vocabulary learning. Rarity uses the mean of
+the hardest third rather than the mean of everything — one unknown word in an
+otherwise easy sentence still sends a learner to a dictionary, and averaging
+hides that.
+
+wordfreq wants MeCab to tokenise Korean, which we do not need since kiwi already
+did it; pulling the raw frequency table skips the tokeniser entirely.
+
+Output on the interview clip looks right: greetings 0.38–0.41, dense football
+sentences 0.72–0.87. The timeline strip interpolates green→red by hue rather
+than bucketing, so a long video reads as a gradient. Unscored segments stay
+neutral — "not measured" must not look like "easy".
+
+Caveats, because this is a heuristic and not a measurement:
+
+- Nobody has checked that a 0.7 segment is actually harder for a real learner
+  than a 0.5 one. That needs learners, not code.
+- Names score as maximally hard because they are missing from the frequency
+  table. 손호준입니다 scores 0.80, which is arguably wrong — an unknown name is
+  not the same problem as unknown vocabulary.
+- Dialect divergence is the fourth factor the brief asks for and it is not in
+  here, because there is no classifier yet. The weights will need revisiting.
+
+### Open question 2 — name merging, partly fixed
+
+`merge_proper_nouns` joins an NNP to a directly following noun, which fixes the
+case found earlier: 손호준 now saves as 손호준 rather than 손호. Contiguity is the
+safety net — 한국 사람 has a space so it is left alone, and a particle after a
+name is not a noun so it is left alone too. Verified that 박지성 and 김연아, which
+kiwi already handled, are unaffected.
+
+Still broken: 이한범 comes back as 이/MM + 한/MM + 범/NNG. There is no proper noun
+to anchor to, so no merge rule can save it — that needs real named-entity
+recognition. Left open rather than papered over.
+
 ### Still open
 
 - Re-run on the 4090 to confirm the numbers match and get realistic timings.

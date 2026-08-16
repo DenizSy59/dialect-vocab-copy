@@ -7,6 +7,19 @@ function fmt(t) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+/* Green through amber to red as a segment gets harder.
+ *
+ * Interpolated in hue rather than picked from buckets, so a long video reads as
+ * a gradient the eye can scan instead of three flat bands. Unscored segments
+ * stay neutral rather than defaulting to green — "not measured" and "easy" must
+ * not look the same.
+ */
+function difficultyColour(d) {
+  if (d == null) return undefined;
+  const hue = 145 - Math.max(0, Math.min(1, d)) * 145; // 145 green -> 0 red
+  return `hsl(${hue} 70% 45%)`;
+}
+
 /* Decide which token owns each character of the segment text.
  *
  * Tokens can overlap: kiwi splits 왔 into 오/VV and 았/EP, both pointing at the
@@ -127,9 +140,19 @@ export function Player({ video, segments, savedLemmas, onSaveWord }) {
             <div
               key={s._id}
               className={`timeline-seg ${i === activeIndex ? "on" : ""}`}
+              title={
+                s.difficulty != null
+                  ? `${fmt(s.start)} · difficulty ${s.difficulty.toFixed(2)}`
+                  : fmt(s.start)
+              }
               style={{
                 left: `${(s.start / duration) * 100}%`,
                 width: `${Math.max(((s.end - s.start) / duration) * 100, 0.4)}%`,
+                background: i === activeIndex ? undefined : difficultyColour(s.difficulty),
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                seek(s.start);
               }}
             />
           ))}
@@ -140,6 +163,11 @@ export function Player({ video, segments, savedLemmas, onSaveWord }) {
       <div className="panel-head" style={{ borderTop: "1px solid var(--line)" }}>
         <span>◇</span> Transcript
         <span className="spacer" />
+        {segments.some((s) => s.difficulty != null) && (
+          <span className="legend">
+            easy <span className="legend-ramp" /> hard
+          </span>
+        )}
         <span className="muted">
           click an underlined word to save it · {segments.length} segments
         </span>

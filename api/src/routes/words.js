@@ -1,6 +1,10 @@
 import express from "express";
+import path from "node:path";
 import { SavedWord } from "../models/SavedWord.js";
 import { Segment } from "../models/Segment.js";
+import { Video } from "../models/Video.js";
+import { cutClip } from "../clips.js";
+import { config } from "../config.js";
 
 const router = express.Router();
 
@@ -64,6 +68,36 @@ router.get("/", async (req, res) => {
 router.delete("/:id", async (req, res) => {
   await SavedWord.findByIdAndDelete(req.params.id);
   res.json({ ok: true });
+});
+
+// The clip for a saved word. Cut on first request and reused after that, so the
+// first play of a word costs a second or two and every later one is instant.
+router.get("/:id/clip", async (req, res) => {
+  try {
+    const word = await SavedWord.findById(req.params.id);
+    if (!word) return res.status(404).json({ error: "word not found" });
+
+    const video = await Video.findById(word.videoId);
+    if (!video) return res.status(404).json({ error: "source video is gone" });
+
+    const clipPath = await cutClip({
+      sourcePath: path.join(config.uploadDir, video.filename),
+      start: word.sentenceStart,
+      end: word.sentenceEnd,
+      outName: `${word._id}.mp4`,
+    });
+
+    if (!word.clipPath) {
+      word.clipPath = path.basename(clipPath);
+      await word.save();
+    }
+
+    // sendFile handles range requests, which the video element needs to seek.
+    res.sendFile(clipPath);
+  } catch (err) {
+    console.error("clip failed:", err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Anki import accepts tab separated values. Tabs and newlines inside a field

@@ -566,6 +566,39 @@ label.field {
   line-height: 1.6;
 }
 
+/* The saved clip. Small, because it sits in a sidebar card, but it is the
+ * feature the whole project is built around so it gets real presence. */
+.clip {
+  width: 100%;
+  margin-top: 9px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-bright);
+  background: #000;
+  display: block;
+}
+
+/* Legend for the difficulty strip. Without it a coloured bar is decoration. */
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+}
+
+.legend-ramp {
+  width: 74px;
+  height: 7px;
+  border-radius: 99px;
+  background: linear-gradient(
+    90deg,
+    hsl(145 70% 45%),
+    hsl(72 70% 45%),
+    hsl(0 70% 45%)
+  );
+}
+
 /* Alignment confidence was a good predictor of mis-transcription in Korean, so
  * a low score is surfaced rather than hidden. */
 .warn {

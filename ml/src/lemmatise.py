@@ -37,6 +37,39 @@ class Token:
         return asdict(self)
 
 
+def merge_proper_nouns(tokens: List[Token]) -> List[Token]:
+    """Glue a proper noun back onto the syllable kiwi split off it.
+
+    Names outside kiwi's dictionary get broken up: 손호준 comes back as
+    손호/NNP + 준/NNG, so clicking the name in the app saved only 손호. Merging an
+    NNP with a directly following noun fixes that.
+
+    Contiguity is what keeps this safe. 한국 사람 has a space between the tokens
+    so it is left alone, and a particle after a name (박지성/NNP + 과/JC) is not a
+    noun so it is left alone too.
+
+    This does not rescue names kiwi fails to see as names at all — 이한범 comes
+    back as 이/MM + 한/MM + 범/NNG, with no proper noun to anchor to. That case
+    needs a real NER pass and is still open.
+    """
+    merged: List[Token] = []
+    for tok in tokens:
+        prev = merged[-1] if merged else None
+        joinable = (
+            prev is not None
+            and prev.pos == "NNP"
+            and tok.pos in ("NNG", "NNP")
+            and prev.char_end == tok.char_start  # no space between them
+        )
+        if joinable:
+            prev.surface += tok.surface
+            prev.lemma = prev.surface
+            prev.char_end = tok.char_end
+            continue
+        merged.append(tok)
+    return merged
+
+
 class KoreanTokeniser:
     """kiwipiepy. Gives stems directly, so lemmatising is mostly adding 다."""
 
@@ -60,7 +93,7 @@ class KoreanTokeniser:
                 char_end=t.start + t.len,
                 content=t.tag in KIWI_CONTENT_TAGS,
             ))
-        return tokens
+        return merge_proper_nouns(tokens)
 
 
 class ChineseTokeniser:
