@@ -112,7 +112,102 @@ brief. Noted for review: jieba tags 一起 as a numeral (`m`), so it falls outsi
 the content-word filter. The filter is a guess and should be revisited once
 there is real transcript output to look at.
 
+### Test data
+
+No clips to hand, so pulled the **FLEURS** dev sets for `ko_kr` and
+`cmn_hans_cn` (Google, CC-BY-4.0 — attribution goes in the report). 344 MB.
+`make_testset.py` extracts clips and writes a manifest pairing each wav with
+its reference transcript.
+
+Reference text was the reason for choosing this over just grabbing audio. The
+research question is accuracy, and accuracy needs ground truth.
+
+What FLEURS is **not**: it is studio-read Wikipedia sentences, standard Seoul
+Korean and Putonghua, audio only. So it is the clean baseline and nothing else
+— not the fast dialogue open question 1 asks about, no dialect content for the
+day 19+ work, and no video to test clip cutting on. Real drama clips still
+needed.
+
+### First end-to-end runs
+
+Six clips, three per language, whisper **small** on CPU. Not large-v3 — every
+number here is provisional until it is re-run on the 4090.
+
+Environment snag worth recording: Homebrew installs ffmpeg 9, but `torchcodec`
+only supports ffmpeg 4–7, so it fails to load and prints an alarming traceback
+on every run. It turns out to be harmless here — audio goes through the ffmpeg
+binary and whisperx's own loader, not torchcodec. Left alone rather than
+downgrading ffmpeg, but if torchaudio decoding is ever needed directly this has
+to be fixed.
+
+**Word timing coverage: 100% of tokens and 100% of content words on all six
+clips, both languages.** Comfortably past the 90% threshold. WhisperX force
+alignment works for Korean and Chinese.
+
+Speed on the Mac was the surprise — compute is *faster* than realtime even on
+CPU: 0.30–0.92x realtime, so ~5–8 s of compute per clip. Wall time is dominated
+by model loading. `transcribe.py` now reports `compute_sec` separately from
+`total_sec`, because the cold-cache first run showed 18.83x realtime, which was
+almost entirely the 1.2 GB alignment model downloading and said nothing at all
+about the pipeline.
+
+### What the errors look like — this is the interesting part
+
+Coverage being 100% does not mean the transcript is right. Coverage measures
+alignment; correctness is a separate question, and the two came apart
+immediately.
+
+Korean, clip 2 — reference vs whisper small:
+
+| reference | output | |
+|---|---|---|
+| 숲이 | 습이 | wrong, not a word |
+| 무척 | 부착 | wrong |
+| 나무가 | 나뭇가 | wrong |
+| 큰 / 없었기 때문에 / 비쌌다 | same | correct |
+
+The errors are on content words. The grammar came through clean. Same pattern
+in the other two Korean clips: 인류→인유, 이집트인들→일트인들, 족히 넘은→좋기남은,
+and one outright hallucination, 몰아냈음을→"보란 S&M".
+
+This is the hypothesis in the brief reproducing itself on the first clip a
+learner would ever see. Reporting it, not concluding it — a Korean speaker has
+to listen to the audio and confirm these are genuinely wrong rather than
+acceptable variants, and it has to be re-run on large-v3 before it means
+anything.
+
+**Alignment score may be a usable error signal, in Korean.** The wrong words
+scored 0.30, 0.33 and 0.56 while correct ones sat at 0.74–0.81. If that holds
+up, the app could warn the learner that a word looks unreliable instead of
+silently teaching them a non-word. Worth testing properly.
+
+It does **not** obviously hold in Chinese: 鋪 and 客棟 are wrong but scored 0.89,
+in the same band as everything else. Different failure mode, since Chinese
+errors are homophone substitutions that the acoustic model is happy with.
+
+### Chinese: traditional vs simplified
+
+Two of the three Chinese clips came back in **traditional** characters
+(因為遠離大陸…, 亞馬遜河…) against simplified references. This is a real product
+problem, not a scoring artefact — a learner studying simplified gets output
+their dictionary lookup will miss, and saved vocabulary would be inconsistent.
+Needs a normalisation step (opencc) once the target script is decided.
+
+Chinese also drops punctuation entirely, and Korean normalises numbers
+differently from the reference (이백만→200만, 1000년→천 년). Neither is really an
+error, but both will inflate word error rate unless the comparison normalises
+text first. Anything that computes WER later has to handle this or the numbers
+will be wrong in our favour and then wrong against us.
+
+### Still open
+
+- Fast dialogue coverage — the actual open question 1. Needs real clips.
+- Everything above re-run on large-v3 on the 4090.
+- Whether the Korean lemmas and the error judgements above are correct. Needs
+  a human who speaks the language.
+- Target Chinese script (simplified or traditional) before writing normalisation.
+
 ### State at end of entry
 
-Repo, environment and the spike script are committed. `transcribe.py` has not
-been run end to end — it needs test clips, which are the next thing required.
+Repo, environment, spike and test-set tooling committed. Pipeline runs end to
+end in both languages and writes timestamped lemmatised JSON. No Node, no React.

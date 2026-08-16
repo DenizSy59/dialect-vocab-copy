@@ -234,11 +234,17 @@ def main():
         "device": device,
         "compute_type": compute_type,
         "audio_duration_sec": round(duration, 2),
+        # total_sec includes model download and load, which on a cold cache is
+        # most of it and says nothing about the pipeline. compute_sec is the
+        # number to compare between machines and model sizes.
         "timing": {
             "transcribe_sec": round(transcribe_sec, 2),
             "align_sec": round(align_sec, 2),
+            "compute_sec": round(transcribe_sec + align_sec, 2),
             "total_sec": round(elapsed, 2),
-            "realtime_factor": round(elapsed / duration, 2) if duration else None,
+            "compute_realtime_factor": (
+                round((transcribe_sec + align_sec) / duration, 2) if duration else None
+            ),
         },
         "coverage": coverage,
         "segments": segments,
@@ -252,8 +258,9 @@ def main():
     print(f"word timing coverage: {coverage['tokens_pct']}% of all tokens, "
           f"{coverage['content_pct']}% of content words "
           f"({timed_content}/{total_content})")
-    print(f"took {elapsed:.1f}s for {duration:.1f}s of audio "
-          f"({elapsed / duration:.2f}x realtime)" if duration else "")
+    compute = transcribe_sec + align_sec
+    print(f"compute {compute:.1f}s for {duration:.1f}s of audio "
+          f"({compute / duration:.2f}x realtime), {elapsed:.1f}s wall including model load")
     print(f"wrote {out_path}")
 
 
