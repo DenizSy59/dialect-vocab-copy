@@ -36,3 +36,6 @@ ml/out/*
 .DS_Store
 .idea/
 .vscode/
+
+# API
+api/uploads/
