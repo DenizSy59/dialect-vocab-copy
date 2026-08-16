@@ -60,6 +60,64 @@ CPU or MPS for small test clips, but large-v3 on 8 GB RAM is not realistic, and
 any timing measurement taken here would not describe the real system. Use the
 Mac for the Node API and React app only.
 
-## Running the spike
+## Running the whole thing
 
-Not yet implemented — see `LOG.md`.
+Four processes. Services first:
+
+```bash
+brew services start redis
+mongod --config /opt/homebrew/etc/mongod.conf --fork
+```
+
+Then the API and the worker, in separate terminals:
+
+```bash
+cd api && npm install && npm run dev
+```
+
+```bash
+cd ml && .venv/bin/python src/worker.py
+```
+
+Frontend, either dev server or built and served by the API:
+
+```bash
+cd web && npm install && npm run dev        # http://localhost:5173
+```
+
+```bash
+cd web && npm run build                     # then http://localhost:4000
+```
+
+The API serves `web/dist` when it exists, so for a demo the build plus the API
+is one process instead of two.
+
+### Local quirks on this Mac
+
+- Homebrew's Redis 8 config loads modules the bottle does not ship. Those
+  `loadmodule` lines are commented out in `/opt/homebrew/etc/redis.conf`.
+- `brew services` will not start MongoDB from the untrusted `mongodb/brew` tap.
+  Run `mongod` directly, as above.
+- `torchcodec` prints a loud failure on every run because Homebrew ships ffmpeg
+  9 and torchcodec supports 4–7. Harmless — audio goes through the ffmpeg binary.
+
+## Running the pipeline on its own
+
+```bash
+cd ml
+.venv/bin/python src/transcribe.py data/samples/clip.mp4 --language ko --model small
+```
+
+Roughly 30 s of compute per minute of audio with `small` on this Mac, 110 s with
+`large-v3`. Keep test clips under two minutes.
+
+## Measuring accuracy
+
+```bash
+cd ml
+.venv/bin/python src/make_testset.py --language ko --count 20
+.venv/bin/python src/evaluate.py --language ko --model small
+```
+
+Reports character and token error rates split by content versus function words,
+plus the concentration ratio. See `LOG.md` for results and caveats.
