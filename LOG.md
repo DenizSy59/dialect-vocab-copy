@@ -301,20 +301,29 @@ Supporting work this needed:
 | ko | base | 0.115 | 0.178 | 0.052 | 3.4 | **1.59** | 0.33 |
 | ko | small | 0.100 | 0.101 | 0.019 | 5.2 | **1.74** | 0.53 |
 | ko | medium | 0.079 | 0.074 | 0.008 | 8.9 | **1.88** | 1.02 |
+| ko | large-v3 | 0.067 | 0.037 | 0.011 | 3.3 | **1.58** | 1.79 |
 | zh | tiny | 0.224 | 0.335 | 0.196 | 1.7 | 1.18 | 0.15 |
 | zh | base | 0.165 | 0.210 | 0.188 | 1.1 | 1.04 | 0.24 |
 | zh | small | 0.093 | 0.103 | 0.105 | 1.0 | 0.99 | 0.37 |
 | zh | medium | 0.035 | 0.027 | 0.023 | 1.2 | 1.06 | 1.03 |
+| zh | large-v3 | 0.026 | 0.013 | 0.015 | 0.9 | 0.96 | 1.78 |
 
-**Korean: the concentration rises monotonically as the model gets better** —
-1.45, 1.59, 1.74, 1.88. Function-word errors nearly vanish between tiny and
-medium (0.111 → 0.008, a 14x improvement) while content-word errors improve only
-3.6x (0.267 → 0.074). By medium, a content word is **8.9 times** more likely to
-be wrong than a function word.
+**Korean: concentration rises with model size up to medium, then falls back at
+large-v3** — 1.45, 1.59, 1.74, 1.88, then 1.58. Between tiny and medium,
+function-word errors nearly vanish (0.111 → 0.008, 14x) while content-word
+errors improve only 3.6x (0.267 → 0.074), so at medium a content word is 8.9
+times more likely to be wrong than a function word. large-v3 then improves
+content words disproportionately (0.074 → 0.037) and the ratio drops back to 3.4.
 
-That is the interesting result, and it is the opposite of the reassuring story.
-A better model does not make the problem go away for a language learner; it
-concentrates the residual errors more tightly onto the words they came for.
+Worth being clear that an earlier reading of this table, before large-v3 had
+run, called the rise monotonic and drew the conclusion that better models
+concentrate errors *more*. large-v3 does not support that. The trend reverses at
+the top end. Running it was the difference between a wrong claim and a right one.
+
+What does survive across every model size: **concentration never drops to 1.0 in
+Korean.** Even at large-v3, errors are 1.58x more likely to land on content
+words than an even spread would predict. The problem gets smaller with a better
+model; it does not go away.
 
 **Chinese shows no such effect** — concentration sits near 1.0 at every size.
 Errors are spread evenly across word types.
@@ -334,17 +343,31 @@ not a finding, and it needs someone who speaks the languages to assess.
   rather than a fact about the language. Worth checking before relying on it.
 - Numbers are not normalised (이백만 vs 200만), so all error rates are
   pessimistic. Pessimistic is the safer direction, but it is not neutral.
-- Still no large-v3.
 
-Speed note: medium runs at 1.0x realtime on the Mac, so a 40-minute video is
-about 40 minutes. Usable but no longer comfortable.
+### large-v3 runs on the Mac after all
+
+It fits. 8 GB is enough for large-v3 int8 plus the wav2vec2 aligner, though the
+machine swaps hard and free memory dropped to about 70 MB during the run. Speed
+is 1.79x realtime, so a 40-minute video would take roughly 72 minutes here.
+
+That is slow but not blocking, and it means **the accuracy study did not need
+the 4090**. The 4090 is now about turnaround time rather than feasibility —
+worth re-running there to confirm the numbers match and to get realistic
+timings, but the finding does not depend on it.
+
+Best results, large-v3: Korean CER 0.067, Chinese CER 0.026.
 
 ### Still open
 
-- Everything above re-run on large-v3 on the 4090. Nothing here is reportable
-  until then.
+- Re-run on the 4090 to confirm the numbers match and get realistic timings.
+  No longer a blocker — large-v3 runs here.
 - Drama dialogue specifically. Interviews are spontaneous but one speaker at a
   time; overlapping drama dialogue is still untested.
+- Accuracy on spontaneous speech. The Commons clips have no reference
+  transcripts, so the whole accuracy study is read speech only. Getting even a
+  few minutes of hand-corrected transcript for the interview clips would let the
+  concentration measurement run on the condition that actually matters.
+- Whether the Chinese null result is real or an artefact of jieba's POS tags.
 - Whether the Korean lemmas and the error judgements above are correct. Needs
   a human who speaks the language.
 - Target Chinese script (simplified or traditional) before writing normalisation.
