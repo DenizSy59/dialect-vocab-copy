@@ -60,7 +60,59 @@ was read at the start of the session. Either the edit went to a different copy
 or it was never saved. Nothing to build against yet; the feature is not due
 until the dialect phase regardless.
 
+### Hardware, resolved
+
+Both machines exist. The 4090 box is the development machine for the ML worker;
+this Mac is what gets used for **presenting**. That split matches the
+architecture in the brief and costs nothing, because at demo time the
+transcripts are already in MongoDB and no GPU is involved.
+
+Consequence for the spike: `transcribe.py` selects its device at runtime —
+CUDA when present, CPU otherwise — so one script is developed here and measured
+on the 4090 without edits. Worth knowing that faster-whisper's backend
+(CTranslate2) has no Metal support, so on Apple Silicon this is CPU even though
+`torch.backends.mps.is_available()` is `True`. Small models only on the Mac.
+
+The CUDA check asked for on day 1 could not be run: `torch.cuda.is_available()`
+returns `False` here and always will. It has to be re-run on the 4090 before any
+timing number is treated as real.
+
+### Environment (on the Mac)
+
+Homebrew Python 3.11.16 and ffmpeg 9.0.1 installed. venv at `ml/.venv`, pinned
+in `ml/requirements.txt`. Key versions: whisperx 3.8.6, faster-whisper 1.2.1,
+ctranslate2 4.8.1, torch 2.8.0, kiwipiepy 0.23.2, jieba 0.42.1.
+
+### Open question 1 — partly answered
+
+WhisperX ships wav2vec2 alignment models for **both** target languages:
+
+- Korean — `kresnik/wav2vec2-large-xlsr-korean`
+- Chinese — `jonatasgrosman/wav2vec2-large-xlsr-53-chinese-zh-cn`
+
+So force alignment is available and the clip feature is not dead on arrival.
+What is still unknown is coverage on real speech — whether fast drama dialogue
+actually gets word timings for >90% of tokens. `transcribe.py` measures this
+and prints it on every run, for all tokens and separately for content words.
+Content-word coverage is the number that matters, since those are what a learner
+saves. Needs test clips to answer.
+
+### Open question 2 — first look
+
+kiwipiepy handles the case named in the brief and the harder irregulars:
+
+| input | lemma | note |
+|---|---|---|
+| 먹었어요 | 먹다 | the example from the brief |
+| 왔는데 | 오다 | contraction 오+았 split correctly |
+| 예뻤어요 | 예쁘다 | ㅂ-irregular |
+
+Not judged as correct — that needs a Korean speaker reading real output, per the
+brief. Noted for review: jieba tags 一起 as a numeral (`m`), so it falls outside
+the content-word filter. The filter is a guess and should be revisited once
+there is real transcript output to look at.
+
 ### State at end of entry
 
-Repo structure and this log committed. Python environment **not** set up.
-`transcribe.py` **not** written. Both are waiting on the hardware question.
+Repo, environment and the spike script are committed. `transcribe.py` has not
+been run end to end — it needs test clips, which are the next thing required.
