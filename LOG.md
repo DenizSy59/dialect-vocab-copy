@@ -357,6 +357,54 @@ timings, but the finding does not depend on it.
 
 Best results, large-v3: Korean CER 0.067, Chinese CER 0.026.
 
+### Backend and frontend — days 4 to 12, compressed
+
+Node API with Express and Mongoose: `Video`, `Segment`, `SavedWord`. Uploads go
+to BullMQ over Redis and the request returns immediately; the frontend polls for
+progress. `worker.py` consumes the same queue from Python — bullmq has an
+official Python port, so the split the architecture wanted works without a
+custom protocol.
+
+Two things had to be worked around locally:
+
+- Redis 8 from Homebrew ships a config that loads modules the bottle does not
+  include, so the service would not start. Commented those lines out.
+- `brew services` refuses to start MongoDB from an untrusted tap. Ran the
+  existing `mongod` 8.2.9 install directly instead of granting the trust.
+
+Also fixed: multer decodes `originalname` as latin1, which turned every Korean
+and Chinese filename into mojibake. Since those are the only filenames this
+project will ever see, that was not cosmetic.
+
+React frontend, plain JavaScript and CSS, no TypeScript or Tailwind, matching
+the MERN stack in the brief. Dark instrument-panel styling with the subtitles
+deliberately kept large and high contrast — the atmosphere is at the edges, the
+learner's reading area is plain and legible.
+
+Working end to end: upload → queue → transcribe → player with time-synced
+subtitles → click a word → saved with its sentence, timings and alignment
+confidence → export as Anki TSV. Content words are underlined and clickable,
+function words dimmed, so what is worth saving is visible without instructions.
+
+Two implementation notes worth keeping:
+
+- Subtitle highlighting runs off requestAnimationFrame, not `timeupdate`. The
+  latter fires about four times a second, which is visibly late.
+- Kiwi's tokens can overlap: 왔 comes back as 오/VV and 았/EP pointing at the
+  same character. Rendering token by token printed 오었 where the transcript
+  said 왔. Fixed by assigning each character a single owning token, content
+  tokens winning ties, so the text renders once and clicking still works.
+
+### Open question 2 — names, seen in the product
+
+Clicking the name 손호준 in a real transcript saved **손호**, not 손호준. Kiwi split
+the given name off the surname. So the answer to "does kiwipiepy handle names
+sensibly" is: not reliably, and it is visible to the user, not just in the JSON.
+
+Not fixed. Options are a proper-noun merge pass over adjacent NNP tokens, or
+letting the user extend a selection. Needs a decision, and a Korean speaker
+should look at how often it actually misfires before either is built.
+
 ### Still open
 
 - Re-run on the 4090 to confirm the numbers match and get realistic timings.

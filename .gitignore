@@ -39,3 +39,6 @@ ml/out/*
 
 # API
 api/uploads/
+
+# Frontend build output
+web/dist/
