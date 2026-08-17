@@ -10,6 +10,7 @@ const videoSchema = new mongoose.Schema(
     language: { type: String, enum: ["ko", "zh", "tr", "auto"], required: true },
     languageConfidence: { type: Number, default: null },
     model: { type: String, default: "auto" },
+    target: { type: String, default: "en" }, // second subtitle track language
 
     status: {
       type: String,

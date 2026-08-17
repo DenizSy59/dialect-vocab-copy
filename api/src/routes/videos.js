@@ -51,6 +51,9 @@ router.post("/", upload.single("video"), async (req, res) => {
       filename: req.file.filename,
       language,
       model: req.body.model || "auto",
+      // Second subtitle track language. English by default, but a learner whose
+      // English is weak should not be forced through it.
+      target: req.body.target || "en",
       status: "queued",
       stage: "waiting for worker",
     });
@@ -60,6 +63,7 @@ router.post("/", upload.single("video"), async (req, res) => {
       path: path.join(config.uploadDir, req.file.filename),
       language,
       model: video.model,
+      target: video.target,
     });
 
     res.status(201).json(video);

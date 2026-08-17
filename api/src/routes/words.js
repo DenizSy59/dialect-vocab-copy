@@ -61,6 +61,9 @@ router.post("/", async (req, res) => {
         lemma: token.lemma,
         surface: token.surface,
         pos: token.pos,
+        // Stored on the word rather than only on the video, so the deck can be
+        // grouped by language without joining every row back to its source.
+        language: video?.language || "",
         senses: entry?.senses ?? [],
         pinyin: entry?.pinyin ?? "",
         sentence: segment.text,
@@ -116,8 +119,23 @@ router.post("/external", async (req, res) => {
 });
 
 router.get("/", async (req, res) => {
-  const filter = req.query.videoId ? { videoId: req.query.videoId } : {};
-  const words = await SavedWord.find(filter).sort({ createdAt: -1 });
+  const filter = {};
+  if (req.query.videoId) filter.videoId = req.query.videoId;
+  if (req.query.language) filter.language = req.query.language;
+
+  const words = await SavedWord.find(filter).sort({ createdAt: -1 }).lean();
+
+  // Words saved before `language` existed have it blank. Resolving it through
+  // the video keeps the deck grouping correct without a migration.
+  const missing = [...new Set(words.filter((w) => !w.language && w.videoId)
+    .map((w) => String(w.videoId)))];
+  if (missing.length) {
+    const videos = await Video.find({ _id: { $in: missing } }, "language").lean();
+    const byId = Object.fromEntries(videos.map((v) => [String(v._id), v.language]));
+    for (const w of words) {
+      if (!w.language && w.videoId) w.videoLanguage = byId[String(w.videoId)] || "";
+    }
+  }
   res.json(words);
 });
 
@@ -164,7 +182,9 @@ function ankiField(text) {
 }
 
 router.get("/export", async (req, res) => {
-  const filter = req.query.videoId ? { videoId: req.query.videoId } : {};
+  const filter = {};
+  if (req.query.videoId) filter.videoId = req.query.videoId;
+  if (req.query.language) filter.language = req.query.language;
   const words = await SavedWord.find(filter).sort({ createdAt: 1 });
 
   // Column order is the card layout: front, then reading, then meaning, then

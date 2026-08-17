@@ -34,20 +34,22 @@ QUEUE_NAME = "transcription"
 REDIS_URL = os.environ.get("REDIS_URL", "redis://127.0.0.1:6379")
 MONGO_URI = os.environ.get("MONGO_URI", "mongodb://127.0.0.1:27017/dialect_vocab")
 SCRIPT = os.environ.get("CHINESE_SCRIPT", "simplified")
+DEFAULT_TARGET = os.environ.get("TRANSLATE_TO", "en")
 
 mongo = MongoClient(MONGO_URI)
 db = mongo.get_default_database()
 
 # Keyed by (language, model). Whisper and the aligner are big; keeping them
 # resident is the difference between a few seconds per job and a minute.
-_pipelines: dict[tuple[str, str], Pipeline] = {}
+_pipelines: dict[tuple[str, str, str], Pipeline] = {}
 
 
-def get_pipeline(language: str, model: str) -> Pipeline:
-    key = (language, model)
+def get_pipeline(language: str, model: str, target: str = "en") -> Pipeline:
+    key = (language, model, target)
     if key not in _pipelines:
-        print(f"loading pipeline for {language}/{model} (first job of this kind)")
-        _pipelines[key] = Pipeline(language, model, device="auto", script=SCRIPT)
+        print(f"loading pipeline for {language}/{model}->{target} (first of its kind)")
+        _pipelines[key] = Pipeline(language, model, device="auto", script=SCRIPT,
+                                   target=target)
     return _pipelines[key]
 
 
@@ -74,6 +76,7 @@ def store_result(video_id, result: dict) -> None:
             "end": seg["end"],
             "text": seg["text"],
             "english": seg.get("english", ""),
+            "translation": seg.get("translation", "") or seg.get("english", ""),
             "words": seg["words"],
             "tokens": [
                 {
@@ -152,7 +155,8 @@ def choose_model(duration: float, device: str) -> str:
     return "small"
 
 
-def run_job_blocking(video_id: str, path: str, language: str, model: str) -> dict:
+def run_job_blocking(video_id: str, path: str, language: str, model: str,
+                     target: str = "en") -> dict:
     """The CPU-bound part. Called in a thread so the worker keeps its heartbeat."""
     if language == "auto":
         set_status(video_id, status="processing", progress=5, stage="detecting language")
@@ -175,7 +179,7 @@ def run_job_blocking(video_id: str, path: str, language: str, model: str) -> dic
         print(f"  chose model {model} for {duration:.0f}s on {device}")
 
     set_status(video_id, status="processing", progress=10, stage="loading model")
-    pipe = get_pipeline(language, model)
+    pipe = get_pipeline(language, model, target)
 
     set_status(video_id, progress=25, stage="transcribing")
     result = pipe.run(Path(path))
@@ -195,6 +199,7 @@ async def process(job, job_token):
         # would look dead to BullMQ and the job would be marked stalled.
         result = await asyncio.to_thread(
             run_job_blocking, video_id, data["path"], data["language"], data["model"],
+            data.get("target") or DEFAULT_TARGET,
         )
         cov = result["coverage"]
         print(

@@ -1,0 +1,282 @@
+/* Themes.
+ *
+ * Every theme redefines the same token set, so nothing outside this file needs
+ * to know which one is active. The rules that hold across all of them:
+ *
+ *   - text on panel must stay legible at 13px, because the subtitle area is the
+ *     product and a pretty theme that makes CJK hard to read is a broken theme
+ *   - --line has to be visible against --panel or every panel edge disappears
+ *   - the accent is for pointing at things, never for body text
+ *
+ * The regional themes take their palettes from real sources — celadon and
+ * dancheong for the Korean ones, ink-painting and imperial red for the Chinese
+ * ones — rather than inventing something and calling it Korean.
+ */
+
+/* ---------- Dark (default, defined in index.css) ---------- */
+
+/* ---------- Light ---------- */
+[data-theme="light"] {
+  --chrome: rgba(255, 255, 255, 0.82);
+  --sunken: rgba(20, 35, 70, 0.05);
+  --pop-bg: #ffffff;
+  --bg: #f4f6fb;
+  --bg-deep: #e8ecf5;
+  --panel: rgba(255, 255, 255, 0.86);
+  --panel-solid: #ffffff;
+  --line: rgba(30, 50, 100, 0.13);
+  --line-bright: rgba(30, 50, 100, 0.26);
+
+  --text: #10182c;
+  --text-dim: #4a5878;
+  --text-faint: #7c89a6;
+
+  --cyan: #0a7ea4;
+  --violet: #6d4aca;
+  --emerald: #067a55;
+  --amber: #a16207;
+  --rose: #be1244;
+
+  --glow-cyan: 0 0 20px rgba(10, 126, 164, 0.18);
+  --glow-violet: 0 0 20px rgba(109, 74, 202, 0.16);
+}
+
+/* ---------- Pastel ---------- */
+[data-theme="pastel"] {
+  --chrome: rgba(255, 250, 253, 0.85);
+  --sunken: rgba(120, 90, 130, 0.06);
+  --pop-bg: #fffafd;
+  --bg: #fdf7fb;
+  --bg-deep: #f7eef6;
+  --panel: rgba(255, 255, 255, 0.82);
+  --panel-solid: #fffafd;
+  --line: rgba(150, 110, 160, 0.18);
+  --line-bright: rgba(150, 110, 160, 0.34);
+
+  --text: #3d2a44;
+  --text-dim: #6f5a78;
+  --text-faint: #a08fa8;
+
+  --cyan: #4aa5a0;
+  --violet: #9b6fc4;
+  --emerald: #62a878;
+  --amber: #d09a3c;
+  --rose: #e0759a;
+
+  --glow-cyan: 0 0 22px rgba(74, 165, 160, 0.22);
+  --glow-violet: 0 0 22px rgba(155, 111, 196, 0.22);
+}
+
+/* ---------- Korean 1: celadon (청자) ----------
+ * The blue-green glaze of Goryeo celadon, with the pale clay it sits on. */
+[data-theme="korean-celadon"] {
+  --chrome: rgba(251, 253, 248, 0.85);
+  --sunken: rgba(50, 85, 75, 0.06);
+  --pop-bg: #fbfdf8;
+  --bg: #f2f5ef;
+  --bg-deep: #e6ebe1;
+  --panel: rgba(255, 255, 255, 0.8);
+  --panel-solid: #fbfdf8;
+  --line: rgba(60, 100, 88, 0.18);
+  --line-bright: rgba(60, 100, 88, 0.34);
+
+  --text: #1d2b26;
+  --text-dim: #4a5f56;
+  --text-faint: #7d9086;
+
+  --cyan: #3f8d7c;
+  --violet: #6e8f6a;
+  --emerald: #46855f;
+  --amber: #9c7c37;
+  --rose: #b0574f;
+
+  --glow-cyan: 0 0 22px rgba(63, 141, 124, 0.22);
+  --glow-violet: 0 0 22px rgba(110, 143, 106, 0.2);
+}
+
+/* ---------- Korean 2: dancheong (단청) ----------
+ * The painted eaves of temple architecture: deep timber, with the five
+ * traditional colours used sparingly as accents rather than all at once. */
+[data-theme="korean-dancheong"] {
+  --chrome: rgba(20, 16, 14, 0.8);
+  --sunken: rgba(0, 0, 0, 0.25);
+  --pop-bg: #241c19;
+  --bg: #14100e;
+  --bg-deep: #0d0a09;
+  --panel: rgba(38, 29, 25, 0.8);
+  --panel-solid: #241c19;
+  --line: rgba(214, 168, 96, 0.2);
+  --line-bright: rgba(214, 168, 96, 0.4);
+
+  --text: #f4ece0;
+  --text-dim: #c2ad95;
+  --text-faint: #8d7a66;
+
+  --cyan: #3f9e9e;
+  --violet: #c96a4e;
+  --emerald: #6ba368;
+  --amber: #d6a860;
+  --rose: #c04a4a;
+
+  --glow-cyan: 0 0 22px rgba(63, 158, 158, 0.3);
+  --glow-violet: 0 0 22px rgba(201, 106, 78, 0.3);
+}
+
+/* ---------- Chinese 1: ink and rice paper (水墨) ----------
+ * Monochrome by design, with a single seal-red accent, the way a brush
+ * painting carries exactly one stamp. */
+[data-theme="chinese-ink"] {
+  --chrome: rgba(255, 253, 248, 0.88);
+  --sunken: rgba(40, 38, 34, 0.05);
+  --pop-bg: #fffdf8;
+  --bg: #f6f3ec;
+  --bg-deep: #ebe6db;
+  --panel: rgba(255, 253, 248, 0.86);
+  --panel-solid: #fffdf8;
+  --line: rgba(40, 38, 34, 0.16);
+  --line-bright: rgba(40, 38, 34, 0.32);
+
+  --text: #1c1a17;
+  --text-dim: #4e4a43;
+  --text-faint: #837d72;
+
+  --cyan: #3a5f6f;
+  --violet: #6b5b7b;
+  --emerald: #4a6b4f;
+  --amber: #9a7434;
+  --rose: #a8322c;
+
+  --glow-cyan: 0 0 20px rgba(58, 95, 111, 0.16);
+  --glow-violet: 0 0 20px rgba(107, 91, 123, 0.16);
+}
+
+/* ---------- Chinese 2: imperial red and gold (朱金) ----------
+ * Lacquer red with gilt. Kept dark so the gold reads as metal rather than
+ * yellow text. */
+[data-theme="chinese-imperial"] {
+  --chrome: rgba(26, 13, 13, 0.82);
+  --sunken: rgba(0, 0, 0, 0.28);
+  --pop-bg: #2c1414;
+  --bg: #1a0d0d;
+  --bg-deep: #120808;
+  --panel: rgba(48, 20, 20, 0.8);
+  --panel-solid: #2c1414;
+  --line: rgba(226, 178, 92, 0.22);
+  --line-bright: rgba(226, 178, 92, 0.42);
+
+  --text: #fbeee0;
+  --text-dim: #d7b9a4;
+  --text-faint: #9c7a6b;
+
+  --cyan: #e2b25c;
+  --violet: #d4674f;
+  --emerald: #83a86b;
+  --amber: #e2b25c;
+  --rose: #e0625f;
+
+  --glow-cyan: 0 0 24px rgba(226, 178, 92, 0.34);
+  --glow-violet: 0 0 24px rgba(212, 103, 79, 0.3);
+}
+
+/* ---------- Nord ---------- */
+[data-theme="nord"] {
+  --chrome: rgba(46, 52, 64, 0.82);
+  --sunken: rgba(0, 0, 0, 0.18);
+  --pop-bg: #3b4252;
+  --bg: #2e3440;
+  --bg-deep: #272c36;
+  --panel: rgba(59, 66, 82, 0.8);
+  --panel-solid: #3b4252;
+  --line: rgba(216, 222, 233, 0.14);
+  --line-bright: rgba(216, 222, 233, 0.3);
+
+  --text: #eceff4;
+  --text-dim: #c3cbd8;
+  --text-faint: #8b96a8;
+
+  --cyan: #88c0d0;
+  --violet: #b48ead;
+  --emerald: #a3be8c;
+  --amber: #ebcb8b;
+  --rose: #bf616a;
+
+  --glow-cyan: 0 0 22px rgba(136, 192, 208, 0.3);
+  --glow-violet: 0 0 22px rgba(180, 142, 173, 0.28);
+}
+
+/* ---------- Terminal green ---------- */
+[data-theme="terminal"] {
+  --chrome: rgba(5, 10, 6, 0.85);
+  --sunken: rgba(0, 0, 0, 0.3);
+  --pop-bg: #0a180e;
+  --bg: #050a06;
+  --bg-deep: #020503;
+  --panel: rgba(10, 24, 14, 0.82);
+  --panel-solid: #0a180e;
+  --line: rgba(80, 240, 140, 0.16);
+  --line-bright: rgba(80, 240, 140, 0.34);
+
+  --text: #ccffdd;
+  --text-dim: #7fd9a2;
+  --text-faint: #4d8a65;
+
+  --cyan: #50f08c;
+  --violet: #9ef0c0;
+  --emerald: #50f08c;
+  --amber: #d8f05a;
+  --rose: #ff7a7a;
+
+  --glow-cyan: 0 0 24px rgba(80, 240, 140, 0.36);
+  --glow-violet: 0 0 24px rgba(158, 240, 192, 0.28);
+}
+
+/* ---------- Sakura ---------- */
+[data-theme="sakura"] {
+  --chrome: rgba(27, 18, 32, 0.84);
+  --sunken: rgba(0, 0, 0, 0.24);
+  --pop-bg: #2d1c34;
+  --bg: #1b1220;
+  --bg-deep: #140d18;
+  --panel: rgba(45, 28, 52, 0.8);
+  --panel-solid: #2d1c34;
+  --line: rgba(255, 183, 213, 0.18);
+  --line-bright: rgba(255, 183, 213, 0.36);
+
+  --text: #fce9f2;
+  --text-dim: #d5b3c6;
+  --text-faint: #9c7b8e;
+
+  --cyan: #ffb7d5;
+  --violet: #c4a2f0;
+  --emerald: #9fd8b4;
+  --amber: #f5cf87;
+  --rose: #ff8fb1;
+
+  --glow-cyan: 0 0 24px rgba(255, 183, 213, 0.34);
+  --glow-violet: 0 0 24px rgba(196, 162, 240, 0.3);
+}
+
+/* The grid and aurora are tuned for dark grounds. On light themes they turn
+ * into visible smudges, so they come off entirely rather than being faded. */
+[data-theme="light"] body::before,
+[data-theme="pastel"] body::before,
+[data-theme="korean-celadon"] body::before,
+[data-theme="chinese-ink"] body::before {
+  opacity: 0.22;
+}
+
+[data-theme="light"] body::after,
+[data-theme="pastel"] body::after,
+[data-theme="korean-celadon"] body::after,
+[data-theme="chinese-ink"] body::after {
+  opacity: 0.35;
+}
+
+/* Primary buttons use a dark ink colour on light themes, since the accent
+ * gradient is light there and white-on-light is unreadable. */
+[data-theme="light"] button.primary,
+[data-theme="pastel"] button.primary,
+[data-theme="korean-celadon"] button.primary,
+[data-theme="chinese-ink"] button.primary {
+  color: #fff;
+}

@@ -6,6 +6,9 @@ import { Player } from "./components/Player.jsx";
 import { SavedWords } from "./components/SavedWords.jsx";
 import { SourcePicker } from "./components/SourcePicker.jsx";
 import { PlatformPanel } from "./components/PlatformPanel.jsx";
+import { DeckLibrary } from "./components/DeckLibrary.jsx";
+import { makeT, UI_LANGUAGES } from "./i18n.js";
+import { THEMES } from "./themes.js";
 
 export default function App() {
   const [online, setOnline] = useState(null);
@@ -18,6 +21,27 @@ export default function App() {
   // are additions that can be removed without touching the core.
   const [source, setSource] = useState("upload");
   const [platformLanguage, setPlatformLanguage] = useState("ko");
+  // Both persisted: a theme or interface language that resets on reload is
+  // worse than not offering the choice.
+  const [theme, setTheme] = useState(
+    () => localStorage.getItem("lexicon.theme") || "dark",
+  );
+  const [uiLanguage, setUiLanguage] = useState(
+    () => localStorage.getItem("lexicon.ui") || "en",
+  );
+  const [view, setView] = useState("player"); // player | deck
+
+  const t = useMemo(() => makeT(uiLanguage), [uiLanguage]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("lexicon.theme", theme);
+  }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem("lexicon.ui", uiLanguage);
+    document.documentElement.lang = uiLanguage;
+  }, [uiLanguage]);
 
   const selected = videos.find((v) => v._id === selectedId) || null;
 
@@ -95,8 +119,42 @@ export default function App() {
           dialect-aware vocabulary from video · speech recognition
         </div>
         <span className="spacer" />
+
+        <button
+          className={`toggle ${view === "deck" ? "on" : ""}`}
+          onClick={() => setView(view === "deck" ? "player" : "deck")}
+        >
+          ★ {t("library")}
+        </button>
+
+        <select
+          className="chrome-select"
+          value={uiLanguage}
+          onChange={(e) => setUiLanguage(e.target.value)}
+          title={t("interfaceLanguage")}
+        >
+          {UI_LANGUAGES.map((l) => (
+            <option key={l.code} value={l.code}>
+              {l.label}
+            </option>
+          ))}
+        </select>
+
+        <select
+          className="chrome-select"
+          value={theme}
+          onChange={(e) => setTheme(e.target.value)}
+          title={t("theme")}
+        >
+          {THEMES.map((x) => (
+            <option key={x.id} value={x.id}>
+              {x.label}
+            </option>
+          ))}
+        </select>
+
         <span className={`status-dot ${online === false ? "off" : ""}`}>
-          {online === false ? "api offline" : "api online"}
+          {online === false ? t("apiOffline") : t("apiOnline")}
         </span>
       </header>
 
@@ -110,6 +168,9 @@ export default function App() {
           </div>
         )}
 
+        {view === "deck" ? (
+          <DeckLibrary t={t} uiLanguage={uiLanguage} onExit={() => setView("player")} />
+        ) : (
         <div className="columns">
           <div>
             {source !== "upload" ? (
@@ -221,6 +282,7 @@ export default function App() {
             <SourcePicker value={source} onChange={setSource} />
             {source === "upload" && (
               <UploadPanel
+                t={t}
                 onUploaded={(v) => {
                   setVideos((prev) => [v, ...prev]);
                   setSelectedId(v._id);
@@ -239,6 +301,7 @@ export default function App() {
             <SavedWords words={words} onChanged={refreshWords} videoId={selectedId} />
           </div>
         </div>
+        )}
       </main>
     </div>
   );

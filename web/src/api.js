@@ -20,7 +20,7 @@ export const api = {
 
   deleteVideo: (id) => fetch(`/api/videos/${id}`, { method: "DELETE" }).then(json),
 
-  uploadVideo: (file, language, model, onProgress) => {
+  uploadVideo: (file, language, model, onProgress, target) => {
     // XHR rather than fetch because fetch still cannot report upload progress,
     // and these files are large enough that a progress bar matters.
     return new Promise((resolve, reject) => {
@@ -28,6 +28,7 @@ export const api = {
       form.append("video", file);
       form.append("language", language);
       form.append("model", model);
+      form.append("target", target || "en");
 
       const xhr = new XMLHttpRequest();
       xhr.open("POST", "/api/videos");
@@ -45,8 +46,13 @@ export const api = {
     });
   },
 
-  listWords: (videoId) =>
-    fetch(`/api/words${videoId ? `?videoId=${videoId}` : ""}`).then(json),
+  listWords: (videoId, language) => {
+    const q = new URLSearchParams();
+    if (videoId) q.set("videoId", videoId);
+    if (language) q.set("language", language);
+    const s = q.toString();
+    return fetch(`/api/words${s ? `?${s}` : ""}`).then(json);
+  },
 
   saveWord: (videoId, segmentId, tokenIndex) =>
     fetch("/api/words", {
@@ -65,6 +71,11 @@ export const api = {
         `&surface=${encodeURIComponent(surface || "")}`,
     ).then(json),
 
-  exportUrl: (videoId) =>
-    `/api/words/export${videoId ? `?videoId=${videoId}` : ""}`,
+  exportUrl: (videoId, language) => {
+    const q = new URLSearchParams();
+    if (videoId) q.set("videoId", videoId);
+    if (language) q.set("language", language);
+    const s = q.toString();
+    return `/api/words/export${s ? `?${s}` : ""}`;
+  },
 };

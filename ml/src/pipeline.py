@@ -18,7 +18,7 @@ from typing import Optional
 from lemmatise import get_tokeniser, Token
 from difficulty import score_all
 from dialect import detect, annotate_segments
-from translate import translate_segments
+from translate import translate_segments, build_translator
 
 
 def pick_device(requested: str = "auto") -> tuple[str, str]:
@@ -169,7 +169,7 @@ class Pipeline:
     def __init__(self, language: str, model: str = "large-v3",
                  device: str = "auto", script: str = "simplified",
                  batch_size: int = 16, quiet: bool = False,
-                 translate: bool = True):
+                 translate: bool = True, target: str = "en"):
         import whisperx
 
         self.language = language
@@ -205,11 +205,11 @@ class Pipeline:
         # Loaded eagerly so the cost lands at worker startup rather than in the
         # middle of the first job, where it would look like a stall.
         self.translator = None
+        self.target = target
         if translate:
             try:
-                from translate import Translator
-                self._log("loading translation model")
-                self.translator = Translator(language, self.device)
+                self._log(f"loading translation model ({language} -> {target})")
+                self.translator = build_translator(language, target, self.device)
             except Exception as e:
                 # A missing translation model must not take the transcript with
                 # it — English subtitles are an addition, not the product.
@@ -266,6 +266,7 @@ class Pipeline:
                 "end": seg.get("end"),
                 "text": text,
                 "english": "",  # filled in below when translation is enabled
+                "translation": "",
                 "words": [{"word": w.get("word"), "start": w.get("start"),
                            "end": w.get("end"), "score": w.get("score")}
                           for w in words],
@@ -282,7 +283,8 @@ class Pipeline:
         translate_sec = 0.0
         if self.translator is not None:
             t0 = time.time()
-            translate_segments(segments, self.language, translator=self.translator)
+            translate_segments(segments, self.language,
+                               translator=self.translator, target=self.target)
             translate_sec = time.time() - t0
 
         def pct(n, d):

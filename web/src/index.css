@@ -15,6 +15,12 @@
   --panel-solid: #111828;
   --line: rgba(126, 160, 255, 0.14);
   --line-bright: rgba(126, 160, 255, 0.3);
+  /* Chrome and inset surfaces. Tokens rather than literals because a
+   * hard-coded dark inset turns unreadable the moment a light theme is
+   * selected — which is exactly what happened. */
+  --chrome: rgba(5, 7, 15, 0.7);
+  --sunken: rgba(3, 4, 10, 0.42);
+  --pop-bg: #0b1020;
 
   /* Ink */
   --text: #e8edff;
@@ -109,7 +115,7 @@ body::after {
   padding: 16px 26px;
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(14px);
-  background: rgba(5, 7, 15, 0.7);
+  background: var(--chrome);
   position: sticky;
   top: 0;
   z-index: 20;
@@ -278,7 +284,7 @@ button.ghost:hover:not(:disabled) {
 select {
   font: inherit;
   color: var(--text);
-  background: rgba(3, 4, 10, 0.6);
+  background: var(--sunken);
   border: 1px solid var(--line-bright);
   border-radius: var(--radius-sm);
   padding: 9px 11px;
@@ -578,7 +584,7 @@ label.field {
   border-radius: var(--radius-sm);
   padding: 11px 13px;
   margin-bottom: 9px;
-  background: rgba(3, 4, 10, 0.45);
+  background: var(--sunken);
 }
 
 .word-head {
@@ -614,7 +620,7 @@ label.field {
   padding: 11px 13px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line);
-  background: rgba(3, 4, 10, 0.4);
+  background: var(--sunken);
 }
 
 .dialect.flag {
@@ -673,7 +679,7 @@ label.field {
   z-index: 100;
   padding: 9px 11px;
   border-radius: var(--radius-sm);
-  background: #0b1020;
+  background: var(--pop-bg);
   border: 1px solid var(--line-bright);
   box-shadow: 0 12px 34px rgba(0, 0, 0, 0.65), var(--glow-violet);
   display: flex;
@@ -791,7 +797,7 @@ label.field {
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   padding: 10px 11px;
-  background: rgba(3, 4, 10, 0.4);
+  background: var(--sunken);
 }
 
 .stat .k {
@@ -976,7 +982,7 @@ label.field {
   min-width: 0;
   font: inherit;
   color: var(--text);
-  background: rgba(3, 4, 10, 0.6);
+  background: var(--sunken);
   border: 1px solid var(--line-bright);
   border-radius: var(--radius-sm);
   padding: 9px 12px;
@@ -1000,7 +1006,7 @@ label.field {
   padding: 11px 13px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line);
-  background: rgba(3, 4, 10, 0.45);
+  background: var(--sunken);
   font-size: 12.5px;
   line-height: 1.55;
   color: var(--text-dim);
@@ -1035,4 +1041,157 @@ label.field {
   padding: 1px 5px;
   border-radius: 4px;
   color: var(--cyan);
+}
+
+/* ---------- Top bar controls ---------- */
+
+.chrome-select {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  max-width: 130px;
+}
+
+/* ---------- Deck library ---------- */
+
+.lang-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.lang-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 18px 16px;
+  text-align: left;
+}
+
+.lang-card-name {
+  font-family: var(--font-cjk);
+  font-size: 19px;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.lang-card-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.study-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.word-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 9px;
+}
+
+.word-chip {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 9px 11px;
+  background: var(--sunken);
+  min-width: 0;
+}
+
+.word-chip-lemma {
+  display: block;
+  font-family: var(--font-cjk);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.word-chip-sense {
+  display: block;
+  font-size: 11.5px;
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Study card ---------- */
+
+/* Centred and roomy on purpose: during review the card is the only thing on
+ * screen, and cramming it into a sidebar-sized box would make the target
+ * language small exactly when it matters most. */
+.card-stage {
+  padding: 40px 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  min-height: 340px;
+}
+
+.card-front {
+  font-family: var(--font-cjk);
+  font-size: 46px;
+  font-weight: 650;
+  line-height: 1.25;
+  color: var(--text);
+}
+
+.card-reading {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-faint);
+}
+
+.card-sense {
+  font-size: 17px;
+  color: var(--cyan);
+  max-width: 540px;
+  line-height: 1.5;
+}
+
+.card-sentence {
+  font-family: var(--font-cjk);
+  font-size: 15px;
+  color: var(--text-dim);
+  max-width: 560px;
+  line-height: 1.7;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  margin-top: 4px;
+}
+
+.card-sentence-en {
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  color: var(--text-faint);
+  font-style: italic;
+  margin-top: 5px;
+}
+
+.card-clip {
+  width: 100%;
+  max-width: 440px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-bright);
+  background: #000;
+  margin-top: 6px;
+}
+
+.card-reveal {
+  margin-top: 18px;
+  padding: 11px 30px;
+}
+
+.card-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
 }

@@ -16,11 +16,12 @@ export const transcriptionQueue = new Queue(config.queueName, {
   },
 });
 
-export async function enqueueTranscription({ videoId, path, language, model }) {
+export async function enqueueTranscription({ videoId, path, language, model, target }) {
   return transcriptionQueue.add("transcribe", {
     videoId,
     path,
     language,
     model,
+    target,
   });
 }

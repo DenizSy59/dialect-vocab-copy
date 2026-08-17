@@ -54,6 +54,28 @@ export const PLATFORMS = [
     features: ["Platform captions", "No clips", "Text-only dialect"],
   },
   {
+    id: "viki",
+    name: "Rakuten Viki",
+    icon: "V",
+    tagline: "Needs the extension",
+    works: false,
+    detail:
+      "Same DRM route as the others. Viki's subtitles are community-made and often better than a platform's own, which makes it a good target once the extension selectors are written for it.",
+    features: ["Platform captions", "No clips", "Text-only dialect"],
+    planned: true,
+  },
+  {
+    id: "iqiyi",
+    name: "iQIYI",
+    icon: "iQ",
+    tagline: "Needs the extension",
+    works: false,
+    detail:
+      "Chinese platform, DRM-protected. Worth supporting because it carries a large amount of Mandarin drama with official subtitles.",
+    features: ["Platform captions", "No clips", "Text-only dialect"],
+    planned: true,
+  },
+  {
     id: "gagaoolala",
     name: "GagaOOLala",
     icon: "G",

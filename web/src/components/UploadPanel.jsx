@@ -23,9 +23,17 @@ const LANGUAGES = [
   { value: "tr", label: "Turkish" },
 ];
 
-export function UploadPanel({ onUploaded }) {
+const TARGETS = [
+  { value: "en", label: "English" },
+  { value: "tr", label: "Türkçe" },
+  { value: "zh", label: "中文" },
+  { value: "ko", label: "한국어" },
+];
+
+export function UploadPanel({ onUploaded, t }) {
   const [language, setLanguage] = useState("auto");
   const [model, setModel] = useState("auto");
+  const [target, setTarget] = useState("en");
   const [file, setFile] = useState(null);
   const [progress, setProgress] = useState(null);
   const [error, setError] = useState("");
@@ -37,7 +45,7 @@ export function UploadPanel({ onUploaded }) {
     setError("");
     setProgress(0);
     try {
-      const video = await api.uploadVideo(file, language, model, setProgress);
+      const video = await api.uploadVideo(file, language, model, setProgress, target);
       setFile(null);
       setProgress(null);
       onUploaded(video);
@@ -94,6 +102,16 @@ export function UploadPanel({ onUploaded }) {
               {LANGUAGES.map((l) => (
                 <option key={l.value} value={l.value}>
                   {l.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field" style={{ flex: 1, minWidth: 170 }}>
+            {t ? t("translateTo") : "Translate to"}
+            <select value={target} onChange={(e) => setTarget(e.target.value)}>
+              {TARGETS.map((x) => (
+                <option key={x.value} value={x.value}>
+                  {x.label}
                 </option>
               ))}
             </select>
