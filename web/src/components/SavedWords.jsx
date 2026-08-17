@@ -63,6 +63,14 @@ export function SavedWords({ words, onChanged, videoId }) {
                 ✕
               </button>
             </div>
+            {w.pinyin && <div className="word-reading">{w.pinyin}</div>}
+            {w.senses?.length > 0 ? (
+              <div className="word-sense">{w.senses.join("; ")}</div>
+            ) : (
+              <div className="word-sense none">
+                no dictionary entry — often a name or a mis-transcription
+              </div>
+            )}
             <div className="word-sentence">{w.sentence}</div>
             {w.confidence != null && w.confidence < LOW_CONFIDENCE && (
               <div className="warn">

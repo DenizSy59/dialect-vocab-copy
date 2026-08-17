@@ -3,10 +3,26 @@ import path from "node:path";
 import { SavedWord } from "../models/SavedWord.js";
 import { Segment } from "../models/Segment.js";
 import { Video } from "../models/Video.js";
+import { DictionaryEntry } from "../models/DictionaryEntry.js";
 import { cutClip } from "../clips.js";
 import { config } from "../config.js";
 
 const router = express.Router();
+
+/* Look a word up, trying the lemma before the surface form.
+ *
+ * The lemma is what a dictionary is keyed on, which is the whole reason the
+ * pipeline lemmatises. But lemmatising can go wrong — a merged proper noun or a
+ * mis-stemmed verb — so the surface form is worth a second try before giving up.
+ */
+export async function lookup(language, lemma, surface) {
+  const candidates = [lemma, surface].filter(Boolean);
+  for (const word of candidates) {
+    const entry = await DictionaryEntry.findOne({ lang: language, word });
+    if (entry) return entry;
+  }
+  return null;
+}
 
 // Save a clicked word. The client sends the segment and which token inside it
 // was clicked; the sentence and timings are looked up here rather than trusted
@@ -34,6 +50,9 @@ router.post("/", async (req, res) => {
       ? overlapping.reduce((a, w) => a + (w.score ?? 0), 0) / overlapping.length
       : null;
 
+    const video = await Video.findById(videoId);
+    const entry = await lookup(video?.language, token.lemma, token.surface);
+
     const saved = await SavedWord.findOneAndUpdate(
       { videoId, lemma: token.lemma },
       {
@@ -42,6 +61,8 @@ router.post("/", async (req, res) => {
         lemma: token.lemma,
         surface: token.surface,
         pos: token.pos,
+        senses: entry?.senses ?? [],
+        pinyin: entry?.pinyin ?? "",
         sentence: segment.text,
         start: token.start,
         end: token.end,
@@ -111,12 +132,17 @@ router.get("/export", async (req, res) => {
   const filter = req.query.videoId ? { videoId: req.query.videoId } : {};
   const words = await SavedWord.find(filter).sort({ createdAt: 1 });
 
+  // Column order is the card layout: front, then reading, then meaning, then
+  // the sentence it came from. A card without the meaning column would send the
+  // learner back to a dictionary, which is the thing this is meant to avoid.
   const rows = words.map((w) =>
     [
       ankiField(w.lemma),
+      ankiField(w.pinyin),
+      ankiField(w.senses.join("; ")),
+      ankiField(w.sentence),
       ankiField(w.surface),
       ankiField(w.pos),
-      ankiField(w.sentence),
       w.start != null ? w.start.toFixed(2) : "",
     ].join("\t"),
   );

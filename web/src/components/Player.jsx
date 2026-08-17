@@ -1,4 +1,44 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { api } from "../api.js";
+
+/* Definition preview on hover.
+ *
+ * Looking a word up before committing it matters: without it the deck fills
+ * with words the learner already knew and the clip for each one is wasted
+ * effort. Results are cached per lemma for the session because the same word
+ * recurs constantly across a transcript.
+ */
+const glossCache = new Map();
+
+function useGloss(language, token, active) {
+  const [gloss, setGloss] = useState(null);
+  const key = token ? `${language}:${token.lemma}` : null;
+
+  useEffect(() => {
+    if (!active || !key || !token) return;
+    if (glossCache.has(key)) return setGloss(glossCache.get(key));
+
+    let cancelled = false;
+    // Small delay so sweeping the mouse across a sentence does not fire a
+    // request per word.
+    const timer = setTimeout(() => {
+      api
+        .lookup(language, token.lemma, token.surface)
+        .then((r) => {
+          glossCache.set(key, r);
+          if (!cancelled) setGloss(r);
+        })
+        .catch(() => {});
+    }, 120);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [key, active, language, token]);
+
+  return glossCache.get(key) || gloss;
+}
 
 function fmt(t) {
   if (t == null) return "--:--";
@@ -52,7 +92,42 @@ function ownership(text, tokens) {
   return runs;
 }
 
-function SubtitleLine({ segment, active, savedLemmas, onSeek, onSaveWord }) {
+function Tok({ run, token, language, saved, onSave }) {
+  const [hover, setHover] = useState(false);
+  const clickable = Boolean(token && token.content);
+  const gloss = useGloss(language, clickable ? token : null, hover);
+
+  if (!clickable) return <span className="tok fn">{run.text}</span>;
+
+  return (
+    <span
+      className={`tok content ${saved ? "saved" : ""}`}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      onClick={() => onSave()}
+    >
+      {run.text}
+      {hover && (
+        <span className="pop">
+          <span className="pop-word">
+            {token.lemma}
+            {gloss?.pinyin && <em> {gloss.pinyin}</em>}
+          </span>
+          <span className="pop-sense">
+            {!gloss
+              ? "…"
+              : gloss.found
+                ? gloss.senses.slice(0, 3).join("; ")
+                : "no dictionary entry"}
+          </span>
+          <span className="pop-hint">{saved ? "in your deck" : "click to save"}</span>
+        </span>
+      )}
+    </span>
+  );
+}
+
+function SubtitleLine({ segment, language, active, savedLemmas, onSeek, onSaveWord }) {
   const runs = useMemo(
     () => ownership(segment.text, segment.tokens || []),
     [segment],
@@ -66,17 +141,15 @@ function SubtitleLine({ segment, active, savedLemmas, onSeek, onSaveWord }) {
       <span className="sub-text">
         {runs.map((run, i) => {
           const token = run.tokenIndex >= 0 ? segment.tokens[run.tokenIndex] : null;
-          const clickable = token && token.content;
-          const saved = token && savedLemmas.has(token.lemma);
           return (
-            <span
+            <Tok
               key={i}
-              className={`tok ${clickable ? "content" : "fn"} ${saved ? "saved" : ""}`}
-              title={clickable ? `${token.lemma} · ${token.pos}` : undefined}
-              onClick={() => clickable && onSaveWord(segment, run.tokenIndex)}
-            >
-              {run.text}
-            </span>
+              run={run}
+              token={token}
+              language={language}
+              saved={Boolean(token && savedLemmas.has(token.lemma))}
+              onSave={() => onSaveWord(segment, run.tokenIndex)}
+            />
           );
         })}
       </span>
@@ -178,6 +251,7 @@ export function Player({ video, segments, savedLemmas, onSaveWord }) {
           <SubtitleLine
             key={s._id}
             segment={s}
+            language={video.language}
             active={i === activeIndex}
             savedLemmas={savedLemmas}
             onSeek={seek}

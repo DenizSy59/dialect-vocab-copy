@@ -59,6 +59,12 @@ export const api = {
 
   clipUrl: (wordId) => `/api/words/${wordId}/clip`,
 
+  lookup: (lang, word, surface) =>
+    fetch(
+      `/api/dictionary?lang=${lang}&word=${encodeURIComponent(word)}` +
+        `&surface=${encodeURIComponent(surface || "")}`,
+    ).then(json),
+
   exportUrl: (videoId) =>
     `/api/words/export${videoId ? `?videoId=${videoId}` : ""}`,
 };

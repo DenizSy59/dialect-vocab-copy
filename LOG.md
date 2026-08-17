@@ -458,6 +458,56 @@ Still broken: 이한범 comes back as 이/MM + 한/MM + 범/NNG. There is no pro
 to anchor to, so no merge rule can save it — that needs real named-entity
 recognition. Left open rather than papered over.
 
+### Dictionary lookup
+
+Until now a saved card carried the word, its sentence and a timestamp, and the
+learner still had to go find out what it meant — which is most of the work the
+app was supposed to remove. Fixed.
+
+Two freely licensed sources, both needing **attribution in the report**:
+
+| language | source | licence | entries |
+|---|---|---|---|
+| Chinese | CC-CEDICT via MDBG | CC BY-SA 4.0 | 197,765 |
+| Korean | Wiktionary via kaikki.org | CC BY-SA 3.0 | 50,474 |
+
+`build_dictionary.py` parses both into a MongoDB `dictionary` collection with a
+compound index on (lang, word) — without it every hover is a collection scan
+over a quarter of a million rows. The Korean extract is 189 MB so it is streamed
+line by line rather than loaded whole; 8 GB does not leave room for carelessness.
+
+Details that mattered:
+
+- Chinese entries are keyed on **both** simplified and traditional. The pipeline
+  normalises to simplified, but keeping traditional as an alias means a lookup
+  still resolves if normalisation is ever turned off.
+- Wiktionary carries "past tense of X" style entries. Those are filtered out:
+  the pipeline already lemmatised, so hitting a form-of entry means the lookup
+  landed on the wrong key and showing it would hide that.
+- Senses are capped at four. Common words carry dozens and a card listing all of
+  them teaches nothing.
+- Lookup tries the lemma first, then the surface form. The lemma is what a
+  dictionary is keyed on, but lemmatising can go wrong, so the surface form is
+  worth a second attempt before giving up.
+
+Definitions are copied onto the saved word at save time rather than looked up on
+read, so a card keeps the meaning it had when it was made and the Anki export is
+self-contained once it leaves the app. The export now has seven columns: lemma,
+reading, meaning, sentence, surface form, part of speech, timestamp.
+
+In the UI, hovering a word shows its definition before committing to it —
+without that the deck fills with words the learner already knew, and each one
+costs a clip. Results cached per lemma for the session, with a 120 ms delay so
+sweeping across a sentence does not fire a request per word.
+
+Verified: 공격수 → "attacker, forward", 朋友 → "friend" with pinyin peng2 you5,
+경기 → three senses including the province. 손호준 correctly returns nothing,
+which is the honest answer for a person's name and is shown as "no dictionary
+entry — often a name or a mis-transcription" rather than an empty box.
+
+Loanwords tagged SL still come through as content words, so "FC" is offered as
+vocabulary. Harmless but untidy; worth revisiting with the POS filter.
+
 ### Still open
 
 - Re-run on the 4090 to confirm the numbers match and get realistic timings.
