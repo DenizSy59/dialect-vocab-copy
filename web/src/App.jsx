@@ -167,6 +167,30 @@ export default function App() {
                     forced alignment. It says nothing about whether the
                     transcription is correct.
                   </div>
+
+                  {selected.dialect?.available && (
+                    <div
+                      className={`dialect ${selected.dialect.detected ? "flag" : "clear"}`}
+                    >
+                      <div className="dialect-head">
+                        {selected.dialect.detected
+                          ? `Regional speech detected — ${selected.dialect.label}`
+                          : "No regional markers found"}
+                      </div>
+                      {selected.dialect.detected && (
+                        <div className="dialect-evidence">
+                          {selected.dialect.evidence.map((e) => (
+                            <span key={e.marker} className="tag">
+                              {e.marker} ×{e.count}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {/* The basis is shown, not buried. A dialect claim a
+                          learner cannot check is worse than none. */}
+                      <div className="dialect-caveat">{selected.dialect.caveat}</div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

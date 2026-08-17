@@ -88,13 +88,26 @@ def store_result(video_id, result: dict) -> None:
                 for t in seg["tokens"]
             ],
             "difficulty": seg.get("difficulty"),
+            "dialectMarkers": seg.get("dialectMarkers", []),
         })
     if docs:
         db.segments.insert_many(docs)
 
     cov, tim = result["coverage"], result["timing"]
+    dia = result.get("dialect") or {}
     set_status(
         video_id,
+        dialect={
+            "available": dia.get("available", False),
+            "detected": dia.get("detected", False),
+            "dialect": dia.get("dialect", ""),
+            "label": dia.get("label", ""),
+            "score": dia.get("score"),
+            "standardScore": dia.get("standard_score"),
+            "method": dia.get("method", ""),
+            "caveat": dia.get("caveat", ""),
+            "evidence": dia.get("evidence", []),
+        },
         status="done",
         progress=100,
         stage="done",

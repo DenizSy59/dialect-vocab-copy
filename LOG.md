@@ -508,6 +508,83 @@ entry — often a name or a mis-transcription" rather than an empty box.
 Loanwords tagged SL still come through as content words, so "FC" is offered as
 vocabulary. Harmless but untidy; worth revisiting with the POS filter.
 
+### Dialect detection — the text fallback, and why it is limited
+
+Built the fallback the brief specifies for when AI-Hub access fails: markers in
+`data/dialect_markers.json` (kept as data so a speaker can correct the lists
+without touching code), weighted by how exclusive each is, normalised per 1000
+tokens. Covers Gyeongsang, Jeolla and Jeju for Korean; Taiwan, Cantonese-
+influenced and Northern for Chinese.
+
+**The first version was useless and validating it is what showed that.** It
+counted raw substrings, so the character 노 — a Gyeongsang ending — matched
+inside 노력 ("effort"), and every standard Korean interview came back as
+Gyeongsang with a score of 14. Rewritten to match over POS-tagged tokens:
+endings only count when the tagger labelled them as endings.
+
+That was too strict on its own, because kiwi splits 억수로 into 억수 + 로 so the
+marker never appears as one token. Added an eojeol fallback for vocabulary
+markers, with prefix matching allowed only from three syllables up — at two,
+고마 would swallow 고마워요 ("thank you"), which is ordinary standard Korean.
+
+Validation, both directions:
+
+| input | expected | result |
+|---|---|---|
+| 3 real Korean interviews | no fire | 0.0, no fire |
+| Real Chinese news clip | no fire | 0.0, no fire |
+| Constructed Gyeongsang | fire | detected, correct dialect |
+| Constructed Jeolla | fire | detected, correct dialect |
+| Constructed Jeju | fire | detected, correct dialect |
+| 노력 / 고마워요 controls | no fire | 0.0 |
+
+**The limitation that matters, and it is not fixable here.** The 湖口话 clip —
+genuinely a dialect recording — is *not* detected, and cannot be. Whisper
+transcribed that dialect audio into standard-looking Mandarin characters (方言
+became 谎言, the dialect's own name came out as 武后娃 and 五侯瓦). The ASR
+normalises regional speech into standard forms, so by the time text reaches this
+detector the dialect signal has already been destroyed.
+
+That is worth stating plainly in the report: **text-based dialect detection can
+only see dialect that survives transcription.** It works on written-in dialect
+and on ASR that preserves regional forms. It cannot recover what the recogniser
+has already standardised away. This is an argument *for* the audio-based
+approach the brief originally wanted, not merely a shortfall of the fallback.
+
+The UI shows the detection, the markers that triggered it, and the caveat
+together — a dialect claim a learner cannot check is worse than none.
+
+### Tests
+
+52 tests with pytest, covering lemmatising, proper-noun merging, word-timing
+attachment, dialect detection and the evaluation aligner. There were none before
+this, which for a capstone is a gap regardless of whether the code works.
+
+They are written around cases that were actually wrong at some point, so a
+failure means a real regression: the 손호 name split, the 노력 false positive,
+Chinese words arriving per character, overlapping tokens on one character,
+aligner indices needed for error attribution.
+
+**One caught a live bug immediately.** `annotate_segments` had not received the
+eojeol fix that `scan` did, so a video could report "Gyeongsang detected" at the
+top while no individual line was marked. Fixed.
+
+### PWA
+
+Manifest, service worker and icons added — the brief lists "installable as a
+PWA" as a deliverable. The worker is deliberately conservative: cache-first for
+the app shell, network-only for everything else. Caching API responses would
+mean a "processing" status frozen forever, and caching video would fill the
+user's quota with files watched once. Offline transcription is impossible
+anyway; the work happens on a server.
+
+**Not verified installable.** All the assets serve correctly over HTTP (manifest
+200 with the right content type, sw.js 200, three icons 200), but service worker
+registration fails inside the embedded browser used for testing with "unknown
+error occurred when fetching the script". That looks like a restriction of that
+browser rather than a fault in the code, but it is unproven either way — check
+it in real Chrome or Safari before claiming the deliverable.
+
 ### Still open
 
 - Re-run on the 4090 to confirm the numbers match and get realistic timings.

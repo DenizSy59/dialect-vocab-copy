@@ -1,0 +1,71 @@
+{
+  "_note": "Text markers for dialect detection. Kept as data rather than code so a speaker can correct the lists without touching the scorer. weight reflects how strongly a marker implies the dialect: 3 = almost exclusive to it, 1 = suggestive but common elsewhere.",
+  "_sources": "Standard descriptive grammars of Korean regional speech and Mandarin regional variation. Compiled by hand; NOT validated by a native speaker yet.",
+  "ko": {
+    "gyeongsang": {
+      "label": "Gyeongsang (경상도)",
+      "endings": [
+        ["노", 2], ["나", 1], ["데이", 3], ["카이", 3], ["가꼬", 3],
+        ["하이소", 3], ["이소", 2], ["뿌라", 3], ["샀다", 2], ["캤다", 3]
+      ],
+      "words": [
+        ["아이가", 3], ["뭐꼬", 3], ["와그라노", 3], ["단디", 3], ["억수로", 3],
+        ["쫌", 1], ["머스마", 3], ["가시나", 3], ["지비", 3], ["문디", 3],
+        ["맞나", 2], ["우얄꼬", 3], ["고마", 2], ["할매", 2], ["할배", 2]
+      ]
+    },
+    "jeolla": {
+      "label": "Jeolla (전라도)",
+      "endings": [
+        ["랑께", 3], ["당께", 3], ["잉", 1], ["부러", 3], ["구만이라", 3],
+        ["그라", 2], ["헝께", 3], ["쟤", 1], ["라우", 3]
+      ],
+      "words": [
+        ["거시기", 3], ["시방", 2], ["아따", 3], ["긍께", 3], ["오메", 3],
+        ["징하다", 3], ["항꾼에", 3], ["뭣이", 2], ["워메", 3]
+      ]
+    },
+    "jeju": {
+      "label": "Jeju (제주)",
+      "endings": [["수다", 3], ["우꽈", 3], ["햄수과", 3], ["ㅁ수다", 3]],
+      "words": [["혼저", 3], ["하영", 3], ["감수광", 3], ["봅서", 3], ["몽케", 3]]
+    },
+    "standard": {
+      "label": "Standard (표준어)",
+      "endings": [["습니다", 1], ["ㅂ니다", 1], ["세요", 1], ["네요", 1], ["어요", 1], ["아요", 1]],
+      "words": [["그래서", 1], ["정말", 1], ["매우", 1], ["하지만", 1]]
+    }
+  },
+  "zh": {
+    "taiwan": {
+      "label": "Taiwan Mandarin (臺灣華語)",
+      "endings": [["啦", 1], ["喔", 2], ["耶", 2], ["囉", 2], ["欸", 2]],
+      "words": [
+        ["這樣子", 2], ["有沒有", 1], ["腳踏車", 3], ["影片", 1], ["網路", 3],
+        ["資訊", 2], ["軟體", 3], ["硬體", 3], ["計程車", 3], ["馬鈴薯", 2],
+        ["鳳梨", 2], ["便當", 2], ["捷運", 3], ["機車", 2], ["蠻", 2]
+      ]
+    },
+    "cantonese": {
+      "label": "Cantonese-influenced (粵語)",
+      "endings": [["嘅", 3], ["咗", 3], ["嘞", 3], ["喇", 2], ["嘢", 3]],
+      "words": [
+        ["係", 3], ["唔", 3], ["佢", 3], ["冇", 3], ["乜", 3],
+        ["咁", 3], ["畀", 3], ["嗰", 3], ["點解", 3], ["食飯", 1]
+      ]
+    },
+    "northern": {
+      "label": "Northern / Beijing (北方話)",
+      "endings": [["兒", 1], ["儿", 1]],
+      "words": [
+        ["甭", 3], ["咋", 2], ["啥", 2], ["嘛", 1], ["倍儿", 3],
+        ["溜达", 2], ["忽悠", 2], ["整", 1], ["咱", 1]
+      ]
+    },
+    "standard": {
+      "label": "Standard (普通话)",
+      "endings": [["的", 1], ["了", 1], ["吗", 1]],
+      "words": [["自行车", 1], ["视频", 1], ["网络", 1], ["软件", 1], ["出租车", 1], ["非常", 1]]
+    }
+  }
+}

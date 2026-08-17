@@ -17,6 +17,7 @@ from typing import Optional
 
 from lemmatise import get_tokeniser, Token
 from difficulty import score_all
+from dialect import detect, annotate_segments
 
 
 def pick_device(requested: str = "auto") -> tuple[str, str]:
@@ -229,6 +230,8 @@ class Pipeline:
         # than inside it. Cheap compared to everything above — a dictionary
         # lookup per content word.
         score_all(segments, self.language)
+        annotate_segments(segments, self.language)
+        dialect_result = detect(segments, self.language)
 
         def pct(n, d):
             return round(100.0 * n / d, 1) if d else 0.0
@@ -255,6 +258,7 @@ class Pipeline:
             # Open question 1: above 90% is good, below 80% means clips will cut
             # mid-word. Content-word coverage is the number that matters, since
             # those are the words a learner saves.
+            "dialect": dialect_result,
             "coverage": {
                 "tokens_total": total,
                 "tokens_with_timing": timed,

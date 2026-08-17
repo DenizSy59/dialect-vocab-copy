@@ -31,6 +31,21 @@ const videoSchema = new mongoose.Schema(
       contentWithTiming: Number,
       contentPct: Number,
     },
+    // Text-marker heuristic, not a trained classifier. `method` and `caveat`
+    // are stored with the result and shown in the UI, because a dialect claim
+    // without its basis is not something a learner or a supervisor can check.
+    dialect: {
+      available: Boolean,
+      detected: Boolean,
+      dialect: String,
+      label: String,
+      score: Number,
+      standardScore: Number,
+      method: String,
+      caveat: String,
+      evidence: [{ marker: String, count: Number, weight: Number }],
+    },
+
     timing: {
       transcribeSec: Number,
       alignSec: Number,

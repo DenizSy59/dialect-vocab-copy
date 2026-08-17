@@ -566,6 +566,54 @@ label.field {
   line-height: 1.6;
 }
 
+/* ---------- Dialect ---------- */
+
+.dialect {
+  margin-top: 13px;
+  padding: 11px 13px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: rgba(3, 4, 10, 0.4);
+}
+
+.dialect.flag {
+  border-color: rgba(167, 139, 250, 0.5);
+  background: rgba(167, 139, 250, 0.09);
+}
+
+.dialect-head {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.dialect.flag .dialect-head {
+  color: var(--violet);
+}
+
+.dialect-evidence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.dialect-evidence .tag {
+  font-family: var(--font-cjk);
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Deliberately not hidden behind a tooltip — the limitation is part of the
+ * result, not a footnote to it. */
+.dialect-caveat {
+  margin-top: 9px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
 /* Definition popover on hover.
  *
  * Anchored to the token and lifted above the subtitle rows. Deliberately opaque
