@@ -44,6 +44,18 @@ class TestKoreanLemmas:
         assert tokens["을"].content is False
         assert tokens["밥"].content is True
 
+    def test_latin_script_is_not_offered_as_vocabulary(self, ko):
+        # "FC" was showing up as a clickable Korean word. A learner already
+        # reads it, and it has no dictionary entry.
+        for t in ko("FC 서울에 왔습니다"):
+            if t.surface == "FC":
+                assert t.content is False
+
+    def test_hangul_loanwords_still_count(self, ko):
+        # Excluding foreign script must not exclude loanwords written in hangul.
+        tokens = {t.surface: t for t in ko("커피를 마셔요")}
+        assert tokens["커피"].content is True
+
 
 class TestProperNounMerging:
     """The bug that saved 손호준 as 손호."""

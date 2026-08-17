@@ -111,6 +111,29 @@ cd ml
 Roughly 30 s of compute per minute of audio with `small` on this Mac, 110 s with
 `large-v3`. Keep test clips under two minutes.
 
+## Dictionaries
+
+Needed before word lookup works. Downloads about 190 MB, runs once:
+
+```bash
+cd ml
+curl -sL -o data/dict/cedict.txt.gz https://www.mdbg.net/chinese/export/cedict/cedict_1_0_ts_utf-8_mdbg.txt.gz
+curl -L -o data/dict/kaikki-ko.jsonl https://kaikki.org/dictionary/Korean/kaikki.org-dictionary-Korean.jsonl
+.venv/bin/python src/build_dictionary.py
+```
+
+Sources are CC-CEDICT (CC BY-SA 4.0) and Wiktionary via kaikki.org (CC BY-SA
+3.0). **Both require attribution in the report.**
+
+## Tests
+
+```bash
+cd ml && .venv/bin/python -m pytest tests/ -q
+```
+
+54 tests over lemmatising, proper-noun merging, word-timing attachment, dialect
+detection and the evaluation aligner.
+
 ## Measuring accuracy
 
 ```bash

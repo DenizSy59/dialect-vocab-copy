@@ -14,7 +14,10 @@ from typing import List, Optional
 
 # Parts of speech worth saving as vocabulary. Particles, endings and
 # punctuation are filtered out — a learner does not save 을/를 as a word.
-KIWI_CONTENT_TAGS = {"NNG", "NNP", "NNB", "NR", "VV", "VA", "VX", "MAG", "MAJ", "XR", "SL"}
+# SL (foreign script) is deliberately excluded. Latin-script tokens like "FC"
+# and "AI" were being offered as Korean vocabulary, which is noise — a learner
+# already reads them. Loanwords written in hangul are tagged NNG and still count.
+KIWI_CONTENT_TAGS = {"NNG", "NNP", "NNB", "NR", "VV", "VA", "VX", "MAG", "MAJ", "XR"}
 JIEBA_CONTENT_TAGS = {"n", "nr", "ns", "nt", "nz", "v", "vd", "vn", "a", "ad", "an", "d", "i", "l", "s", "t"}
 
 # Korean predicate tags. Kiwi gives the bare stem for these, so the dictionary
