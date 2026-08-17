@@ -109,6 +109,36 @@ def attach_timings(tokens: list, spans: list) -> None:
             tok.end = max(ends)
 
 
+SUPPORTED = ("ko", "zh", "tr")
+
+# Detection only needs to tell a handful of languages apart, and it listens to
+# the opening seconds, so the smallest model is enough. Cached because it is
+# loaded once per worker and then used for every auto-language job.
+_detect_model = None
+
+
+def detect_language(video: Path, device: str | None = None) -> tuple[str, float]:
+    """Identify the spoken language. Returns (code, probability).
+
+    Asking the user to pick the language is a question the software can answer
+    itself, and getting it wrong is obvious in the output, so this is a safe
+    thing to automate — with the picker still there as an override.
+    """
+    global _detect_model
+    import whisperx
+
+    dev, compute = pick_device(device or "auto")
+    if _detect_model is None:
+        _detect_model = whisperx.load_model("tiny", dev, compute_type=compute)
+
+    audio_path = extract_audio(Path(video))
+    audio = whisperx.load_audio(str(audio_path))
+    # faster-whisper exposes the detector under the wrapped model.
+    inner = getattr(_detect_model, "model", _detect_model)
+    language, probability, _ = inner.detect_language(audio)
+    return language, float(probability)
+
+
 class ScriptNormaliser:
     """Force Chinese output to one script.
 

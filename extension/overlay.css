@@ -1,0 +1,96 @@
+/* Sits above the player's own subtitles.
+ *
+ * The platform keeps rendering its native subtitle underneath; this overlay is
+ * the interactive copy. Positioned above the bottom of the screen so it clears
+ * the player controls, and pointer-events are off everywhere except the words
+ * themselves so it never blocks pausing or seeking.
+ */
+
+.lexicon-overlay {
+  position: fixed;
+  left: 50%;
+  bottom: 13vh;
+  transform: translateX(-50%);
+  z-index: 2147483000;
+  max-width: min(1100px, 92vw);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  font-family: "Apple SD Gothic Neo", "Noto Sans KR", "PingFang SC",
+    ui-sans-serif, system-ui, sans-serif;
+}
+
+.lexicon-overlay.visible {
+  opacity: 1;
+}
+
+.lexicon-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 6px;
+  pointer-events: none;
+}
+
+.lexicon-brand {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: #22d3ee;
+  background: rgba(5, 7, 15, 0.85);
+  border: 1px solid rgba(34, 211, 238, 0.4);
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+
+.lexicon-hint {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(232, 237, 255, 0.55);
+}
+
+.lexicon-line {
+  background: rgba(5, 7, 15, 0.9);
+  border: 1px solid rgba(126, 160, 255, 0.25);
+  border-radius: 10px;
+  padding: 12px 18px;
+  font-size: 26px;
+  line-height: 1.6;
+  color: #fff;
+  text-align: center;
+  /* Streaming players sit on video, so a plain shadow is not enough contrast
+   * on a bright scene. */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+}
+
+/* Only the words take clicks. Everything else stays transparent so the player
+ * controls underneath keep working. */
+.lexicon-tok {
+  pointer-events: auto;
+  cursor: pointer;
+  border-bottom: 2px solid rgba(126, 160, 255, 0.45);
+  border-radius: 3px;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.lexicon-tok:hover {
+  background: rgba(34, 211, 238, 0.28);
+  border-bottom-color: #22d3ee;
+}
+
+.lexicon-tok.saving {
+  background: rgba(251, 191, 36, 0.28);
+}
+
+.lexicon-tok.saved {
+  background: rgba(52, 211, 153, 0.28);
+  border-bottom-color: #34d399;
+}
+
+.lexicon-tok.failed {
+  background: rgba(251, 113, 133, 0.28);
+  border-bottom-color: #fb7185;
+}

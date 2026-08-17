@@ -70,7 +70,7 @@ def load_cedict(path: Path) -> list:
     return list(entries.values())
 
 
-def load_kaikki(path: Path) -> list:
+def load_kaikki(path: Path, lang: str = "ko") -> list:
     """Korean, from the Wiktionary JSONL extract.
 
     Streamed line by line — the file is about 200 MB and this machine has 8 GB,
@@ -101,7 +101,7 @@ def load_kaikki(path: Path) -> list:
                 continue
 
             entry = entries.setdefault(word, {
-                "lang": "ko", "word": word, "pos": row.get("pos", ""), "senses": [],
+                "lang": lang, "word": word, "pos": row.get("pos", ""), "senses": [],
             })
             for g in glosses:
                 if g not in entry["senses"]:
@@ -114,7 +114,7 @@ def load_kaikki(path: Path) -> list:
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--only", choices=["zh", "ko"], default=None)
+    ap.add_argument("--only", choices=["zh", "ko", "tr"], default=None)
     args = ap.parse_args()
 
     db = MongoClient(MONGO_URI).get_default_database()
@@ -124,13 +124,15 @@ def main():
         jobs.append(("zh", DICT_DIR / "cedict.txt.gz", load_cedict))
     if args.only in (None, "ko"):
         jobs.append(("ko", DICT_DIR / "kaikki-ko.jsonl", load_kaikki))
+    if args.only in (None, "tr"):
+        jobs.append(("tr", DICT_DIR / "kaikki-tr.jsonl", load_kaikki))
 
     for lang, path, loader in jobs:
         if not path.exists():
             print(f"!! missing {path} — skipped")
             continue
         print(f"parsing {path.name}")
-        rows = loader(path)
+        rows = loader(path) if lang != "tr" else loader(path, "tr")
         print(f"  {len(rows)} entries")
 
         db.dictionary.delete_many({"lang": lang})

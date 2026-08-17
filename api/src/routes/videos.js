@@ -34,9 +34,11 @@ router.post("/", upload.single("video"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "no file uploaded" });
 
-    const language = req.body.language;
-    if (!["ko", "zh"].includes(language)) {
-      return res.status(400).json({ error: "language must be ko or zh" });
+    // "auto" is the default: the worker detects the language from the audio,
+    // which is a question the software can answer without asking.
+    const language = req.body.language || "auto";
+    if (!["ko", "zh", "tr", "auto"].includes(language)) {
+      return res.status(400).json({ error: "language must be ko, zh, tr or auto" });
     }
 
     // multer hands back originalname as latin1-decoded bytes, which turns any
@@ -48,7 +50,7 @@ router.post("/", upload.single("video"), async (req, res) => {
       originalName,
       filename: req.file.filename,
       language,
-      model: req.body.model || config.defaultModel,
+      model: req.body.model || "auto",
       status: "queued",
       stage: "waiting for worker",
     });

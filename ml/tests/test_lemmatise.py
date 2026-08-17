@@ -109,3 +109,27 @@ class TestChinese:
 def test_unknown_language_is_rejected():
     with pytest.raises(ValueError):
         get_tokeniser("ja")
+
+
+class TestTurkish:
+    """Turkish is agglutinative like Korean, so lemmatising matters as much."""
+
+    @pytest.fixture(scope="class")
+    def tr(self):
+        return get_tokeniser("tr")
+
+    def test_verb_to_infinitive(self, tr):
+        assert "izlemek" in lemmas(tr("Dün bir film izledim"))
+
+    def test_possessive_and_case_stripped(self, tr):
+        assert "arkadaş" in lemmas(tr("arkadaşlarımla konuştum"))
+
+    def test_offsets_reconstruct_the_text(self, tr):
+        text = "Dün güzel bir film izledim"
+        for t in tr(text):
+            assert text[t.char_start:t.char_end] == t.surface
+
+    def test_punctuation_is_not_content(self, tr):
+        for t in tr("Merhaba, nasılsın?"):
+            if t.surface in (",", "?"):
+                assert t.content is False

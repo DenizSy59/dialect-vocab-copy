@@ -5,8 +5,13 @@ import mongoose from "mongoose";
 // harder to learn than one with the moment it was said attached.
 const savedWordSchema = new mongoose.Schema(
   {
-    videoId: { type: mongoose.Schema.Types.ObjectId, ref: "Video", index: true },
-    segmentId: { type: mongoose.Schema.Types.ObjectId, ref: "Segment" },
+    // Null for words saved from a streaming platform through the extension:
+    // there is no uploaded video behind them, only the subtitle line.
+    videoId: { type: mongoose.Schema.Types.ObjectId, ref: "Video", index: true, default: null },
+    segmentId: { type: mongoose.Schema.Types.ObjectId, ref: "Segment", default: null },
+    language: { type: String, default: "" },
+    source: { type: String, default: "upload" }, // upload | netflix | prime | gagaoolala
+    sourceUrl: { type: String, default: "" },
 
     lemma: { type: String, required: true, index: true },
     surface: String, // the inflected form as it appeared
@@ -41,6 +46,8 @@ const savedWordSchema = new mongoose.Schema(
 
 // One entry per lemma per video — clicking the same word twice should not
 // create duplicates.
-savedWordSchema.index({ videoId: 1, lemma: 1 }, { unique: true });
+// Unique per source too, so the same word saved from Netflix and from an
+// upload does not collide on a null videoId.
+savedWordSchema.index({ videoId: 1, source: 1, lemma: 1 }, { unique: true });
 
 export const SavedWord = mongoose.model("SavedWord", savedWordSchema);

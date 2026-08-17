@@ -5,6 +5,7 @@ import { api } from "../api.js";
 // measured rather than guessed, because "large-v3" means nothing to someone
 // deciding whether to wait.
 const MODELS = [
+  { value: "auto", label: "Automatic — best affordable" },
   { value: "tiny", label: "tiny — ~15s per minute" },
   { value: "base", label: "base — ~20s per minute" },
   { value: "small", label: "small — ~30s per minute" },
@@ -12,9 +13,19 @@ const MODELS = [
   { value: "large-v3", label: "large-v3 — ~110s per minute" },
 ];
 
+// Both default to automatic. The language is detectable from the audio and the
+// model can be chosen from the clip length, so asking is asking the user to
+// answer a question the software already knows.
+const LANGUAGES = [
+  { value: "auto", label: "Detect automatically" },
+  { value: "ko", label: "Korean" },
+  { value: "zh", label: "Chinese" },
+  { value: "tr", label: "Turkish" },
+];
+
 export function UploadPanel({ onUploaded }) {
-  const [language, setLanguage] = useState("ko");
-  const [model, setModel] = useState("small");
+  const [language, setLanguage] = useState("auto");
+  const [model, setModel] = useState("auto");
   const [file, setFile] = useState(null);
   const [progress, setProgress] = useState(null);
   const [error, setError] = useState("");
@@ -80,8 +91,11 @@ export function UploadPanel({ onUploaded }) {
           <label className="field">
             Language
             <select value={language} onChange={(e) => setLanguage(e.target.value)}>
-              <option value="ko">Korean</option>
-              <option value="zh">Chinese</option>
+              {LANGUAGES.map((l) => (
+                <option key={l.value} value={l.value}>
+                  {l.label}
+                </option>
+              ))}
             </select>
           </label>
           <label className="field" style={{ flex: 1, minWidth: 190 }}>

@@ -26,7 +26,7 @@ from pipeline import Pipeline
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("video", type=Path)
-    ap.add_argument("--language", required=True, choices=["ko", "zh"])
+    ap.add_argument("--language", required=True, choices=["ko", "zh", "tr"])
     ap.add_argument("--model", default="large-v3",
                     help="whisper model size; use 'small' or 'base' on CPU")
     ap.add_argument("--device", default="auto", choices=["auto", "cuda", "cpu"])

@@ -97,7 +97,7 @@ def cer(ref: str, hyp: str) -> tuple[int, int]:
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--language", required=True, choices=["ko", "zh"])
+    ap.add_argument("--language", required=True, choices=["ko", "zh", "tr"])
     ap.add_argument("--model", default="small")
     ap.add_argument("--device", default="auto", choices=["auto", "cuda", "cpu"])
     ap.add_argument("--limit", type=int, default=None)

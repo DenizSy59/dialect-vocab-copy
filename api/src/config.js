@@ -30,5 +30,5 @@ export const config = {
   // Whisper model the worker should use. small is the sensible default on the
   // Mac: about 40 s for a one minute clip against 2.5 min for large-v3, and it
   // already reproduces the error pattern we care about.
-  defaultModel: process.env.WHISPER_MODEL || "small",
+  defaultModel: process.env.WHISPER_MODEL || "auto",
 };

@@ -92,23 +92,60 @@ function ownership(text, tokens) {
   return runs;
 }
 
+const POP_WIDTH = 280;
+const POP_MARGIN = 10;
+
+/* Place the popover in viewport coordinates rather than beside the token.
+ *
+ * Anchoring it to the token meant it clipped: words near the left edge pushed
+ * it off screen, and the transcript scrolls inside its own container so a
+ * popover above a top line disappeared behind the video. Fixed positioning plus
+ * clamping keeps it on screen wherever the word is, and it flips below the word
+ * when there is not enough room above.
+ */
+function popoverPosition(rect) {
+  const left = Math.min(
+    Math.max(POP_MARGIN, rect.left + rect.width / 2 - POP_WIDTH / 2),
+    window.innerWidth - POP_WIDTH - POP_MARGIN,
+  );
+  const above = rect.top > 150;
+  return {
+    left,
+    top: above ? undefined : rect.bottom + 8,
+    bottom: above ? window.innerHeight - rect.top + 8 : undefined,
+    flipped: !above,
+  };
+}
+
 function Tok({ run, token, language, saved, onSave }) {
-  const [hover, setHover] = useState(false);
+  const [pos, setPos] = useState(null);
+  const ref = useRef(null);
   const clickable = Boolean(token && token.content);
-  const gloss = useGloss(language, clickable ? token : null, hover);
+  const gloss = useGloss(language, clickable ? token : null, Boolean(pos));
 
   if (!clickable) return <span className="tok fn">{run.text}</span>;
 
   return (
     <span
+      ref={ref}
       className={`tok content ${saved ? "saved" : ""}`}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
+      onMouseEnter={() => {
+        if (ref.current) setPos(popoverPosition(ref.current.getBoundingClientRect()));
+      }}
+      onMouseLeave={() => setPos(null)}
       onClick={() => onSave()}
     >
       {run.text}
-      {hover && (
-        <span className="pop">
+      {pos && (
+        <span
+          className={`pop ${pos.flipped ? "below" : ""}`}
+          style={{
+            left: pos.left,
+            top: pos.top,
+            bottom: pos.bottom,
+            width: POP_WIDTH,
+          }}
+        >
           <span className="pop-word">
             {token.lemma}
             {gloss?.pinyin && <em> {gloss.pinyin}</em>}

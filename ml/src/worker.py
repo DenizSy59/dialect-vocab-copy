@@ -25,7 +25,7 @@ from bullmq import Worker
 from pymongo import MongoClient
 
 sys.path.insert(0, str(Path(__file__).parent))
-from pipeline import Pipeline
+from pipeline import Pipeline, detect_language, media_duration, pick_device, SUPPORTED
 
 # Must match queueName in the Node API config, or jobs go into a queue nobody
 # is watching and simply sit there.
@@ -132,8 +132,48 @@ def store_result(video_id, result: dict) -> None:
     )
 
 
+def choose_model(duration: float, device: str) -> str:
+    """Pick a Whisper size when the user did not.
+
+    Quality when it is affordable, speed when it is not. On a real GPU large-v3
+    is fast enough that there is no reason to use anything else; on CPU it runs
+    at about 1.8x realtime, so it is only sensible for short clips.
+
+    This matters more than it sounds: small produces visibly wrong Korean
+    content words, and a learner cannot tell a mis-transcription from a word
+    they do not know yet.
+    """
+    if device == "cuda":
+        return "large-v3"
+    if duration <= 60:
+        return "large-v3"
+    if duration <= 180:
+        return "medium"
+    return "small"
+
+
 def run_job_blocking(video_id: str, path: str, language: str, model: str) -> dict:
     """The CPU-bound part. Called in a thread so the worker keeps its heartbeat."""
+    if language == "auto":
+        set_status(video_id, status="processing", progress=5, stage="detecting language")
+        detected, probability = detect_language(Path(path))
+        if detected not in SUPPORTED:
+            raise RuntimeError(
+                f"detected language {detected!r} is not supported "
+                f"(this build handles {', '.join(SUPPORTED)}). "
+                "Pick a language manually if the detection is wrong."
+            )
+        language = detected
+        set_status(video_id, language=language, languageConfidence=round(probability, 3))
+        print(f"  detected language: {language} ({probability:.2f})")
+
+    if model == "auto":
+        duration = media_duration(Path(path))
+        device, _ = pick_device("auto")
+        model = choose_model(duration, device)
+        set_status(video_id, model=model)
+        print(f"  chose model {model} for {duration:.0f}s on {device}")
+
     set_status(video_id, status="processing", progress=10, stage="loading model")
     pipe = get_pipeline(language, model)
 

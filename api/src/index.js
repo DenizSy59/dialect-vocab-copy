@@ -10,6 +10,7 @@ import { connectDb } from "./db.js";
 import videosRouter from "./routes/videos.js";
 import wordsRouter from "./routes/words.js";
 import dictionaryRouter from "./routes/dictionary.js";
+import tokeniseRouter from "./routes/tokenise.js";
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use("/media", express.static(config.uploadDir, { acceptRanges: true }));
 app.use("/api/videos", videosRouter);
 app.use("/api/words", wordsRouter);
 app.use("/api/dictionary", dictionaryRouter);
+app.use("/api/tokenise", tokeniseRouter);
 
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, model: config.defaultModel });

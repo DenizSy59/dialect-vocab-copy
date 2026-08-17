@@ -27,7 +27,7 @@ SAMPLES = DATA / "samples"
 
 # FLEURS names its configs differently from the two-letter codes used elsewhere
 # in this project.
-CONFIGS = {"ko": "ko_kr", "zh": "cmn_hans_cn"}
+CONFIGS = {"ko": "ko_kr", "zh": "cmn_hans_cn", "tr": "tr_tr"}
 
 # The TSV has no header row. Columns are id, filename, raw transcription,
 # normalised transcription, phonemes, samples, gender.
@@ -46,7 +46,7 @@ def load_references(tsv: Path) -> dict:
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--language", required=True, choices=["ko", "zh"])
+    ap.add_argument("--language", required=True, choices=["ko", "zh", "tr"])
     ap.add_argument("--count", type=int, default=4)
     args = ap.parse_args()
 

@@ -666,14 +666,11 @@ label.field {
 }
 
 .pop {
-  position: absolute;
-  bottom: calc(100% + 9px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 30;
-  min-width: 172px;
-  max-width: 310px;
-  width: max-content;
+  /* Fixed, not absolute: the transcript scrolls in its own box and the video
+   * sits above it, so an absolutely positioned popover got clipped by both.
+   * Coordinates are computed and clamped in JS. */
+  position: fixed;
+  z-index: 100;
   padding: 9px 11px;
   border-radius: var(--radius-sm);
   background: #0b1020;
@@ -855,4 +852,187 @@ label.field {
   margin-top: 4px;
   line-height: 1.45;
   font-style: italic;
+}
+
+/* ---------- Source picker ---------- */
+
+.source-current {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  text-align: left;
+  padding: 11px 13px;
+}
+
+.source-icon {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  background: rgba(126, 160, 255, 0.12);
+  border: 1px solid var(--line-bright);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cyan);
+}
+
+.source-name {
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chev {
+  color: var(--text-faint);
+  transition: transform 0.15s;
+}
+.chev.up {
+  transform: rotate(180deg);
+}
+
+.source-list {
+  margin-top: 8px;
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--panel-solid);
+}
+
+.source-option {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 10px 12px;
+}
+
+.source-option:hover:not(:disabled) {
+  background: rgba(126, 160, 255, 0.1);
+  border-color: transparent;
+}
+
+.source-option.active {
+  background: rgba(34, 211, 238, 0.12);
+}
+
+.source-option-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.source-tag {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+/* Marks the options that physically cannot run in this page. Better to say so
+ * in the list than to let someone pick one and hit a wall. */
+.pill {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(167, 139, 250, 0.16);
+  color: var(--violet);
+  border: 1px solid rgba(167, 139, 250, 0.4);
+}
+
+.source-detail {
+  margin: 13px 0 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+
+.source-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 11px;
+}
+
+/* ---------- Platform panels ---------- */
+
+.url-row {
+  display: flex;
+  gap: 9px;
+}
+
+.url-input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  color: var(--text);
+  background: rgba(3, 4, 10, 0.6);
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+}
+
+.url-input:focus {
+  outline: none;
+  border-color: var(--cyan);
+}
+
+.yt {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  background: #000;
+}
+
+.notice {
+  margin-top: 13px;
+  padding: 11px 13px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: rgba(3, 4, 10, 0.45);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+
+.notice.strong {
+  border-color: rgba(167, 139, 250, 0.45);
+  background: rgba(167, 139, 250, 0.1);
+  color: var(--text);
+}
+
+.mini-head {
+  margin: 18px 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.steps {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text-dim);
+}
+
+.steps code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: rgba(126, 160, 255, 0.1);
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: var(--cyan);
 }

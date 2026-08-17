@@ -4,6 +4,8 @@ import { UploadPanel } from "./components/UploadPanel.jsx";
 import { Library } from "./components/Library.jsx";
 import { Player } from "./components/Player.jsx";
 import { SavedWords } from "./components/SavedWords.jsx";
+import { SourcePicker } from "./components/SourcePicker.jsx";
+import { PlatformPanel } from "./components/PlatformPanel.jsx";
 
 export default function App() {
   const [online, setOnline] = useState(null);
@@ -12,6 +14,10 @@ export default function App() {
   const [segments, setSegments] = useState([]);
   const [words, setWords] = useState([]);
   const [error, setError] = useState("");
+  // Upload is the primary deliverable, so it is the default source. The others
+  // are additions that can be removed without touching the core.
+  const [source, setSource] = useState("upload");
+  const [platformLanguage, setPlatformLanguage] = useState("ko");
 
   const selected = videos.find((v) => v._id === selectedId) || null;
 
@@ -106,7 +112,13 @@ export default function App() {
 
         <div className="columns">
           <div>
-            {selected && selected.status === "done" && segments.length > 0 ? (
+            {source !== "upload" ? (
+              <PlatformPanel
+                platformId={source}
+                language={platformLanguage}
+                onLanguage={setPlatformLanguage}
+              />
+            ) : selected && selected.status === "done" && segments.length > 0 ? (
               <Player
                 video={selected}
                 segments={segments}
@@ -156,6 +168,15 @@ export default function App() {
                       <div className="v">{selected.timing?.computeRealtimeFactor}x</div>
                     </div>
                     <div className="stat">
+                      <div className="k">Language</div>
+                      <div className="v" style={{ fontSize: 13 }}>
+                        {selected.language}
+                        {selected.languageConfidence != null && (
+                          <span className="muted"> auto</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="stat">
                       <div className="k">Model</div>
                       <div className="v" style={{ fontSize: 13 }}>
                         {selected.model}
@@ -197,12 +218,15 @@ export default function App() {
           </div>
 
           <div>
-            <UploadPanel
-              onUploaded={(v) => {
-                setVideos((prev) => [v, ...prev]);
-                setSelectedId(v._id);
-              }}
-            />
+            <SourcePicker value={source} onChange={setSource} />
+            {source === "upload" && (
+              <UploadPanel
+                onUploaded={(v) => {
+                  setVideos((prev) => [v, ...prev]);
+                  setSelectedId(v._id);
+                }}
+              />
+            )}
             <Library
               videos={videos}
               selectedId={selectedId}

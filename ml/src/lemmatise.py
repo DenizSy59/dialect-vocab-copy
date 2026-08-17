@@ -126,9 +126,76 @@ class ChineseTokeniser:
         return tokens
 
 
+class TurkishTokeniser:
+    """zeyrek, a Python port of Zemberek.
+
+    Turkish is agglutinative like Korean, so the same problem applies: without
+    lemmatising, arkadaşlarımla ("with my friends") would be saved as its own
+    vocabulary item instead of arkadaş ("friend").
+
+    Words are split on whitespace and punctuation rather than by a
+    morphological segmenter, because zeyrek analyses whole words and the
+    character offsets have to line up with the original text for word timings.
+    """
+
+    # Zeyrek's coarse tags. Nouns, verbs, adjectives and adverbs are the
+    # flashcard-worthy ones; pronouns, conjunctions and postpositions are not.
+    CONTENT_POS = {"Noun", "Verb", "Adj", "Adv"}
+
+    def __init__(self):
+        import logging
+        import zeyrek
+
+        # zeyrek logs every candidate parse at INFO, which floods the worker.
+        logging.getLogger("zeyrek").setLevel(logging.WARNING)
+        for name in ("zeyrek.morphology", "zeyrek.rulebasedanalyzer"):
+            logging.getLogger(name).setLevel(logging.WARNING)
+
+        self.analyzer = zeyrek.MorphAnalyzer()
+
+    def _analyse(self, word: str):
+        """Return (lemma, pos). Falls back to the surface form when unknown."""
+        try:
+            parses = self.analyzer.analyze(word)
+        except Exception:
+            return word, ""
+        flat = [p for group in parses for p in group] if parses else []
+        if not flat:
+            return word, ""
+        # First parse is zeyrek's best guess; taking the shortest lemma among
+        # equally-ranked parses avoids preferring a derived form over the root.
+        best = flat[0]
+        return best.lemma or word, best.pos or ""
+
+    def __call__(self, text: str) -> List[Token]:
+        import re
+
+        tokens = []
+        # Keep punctuation as its own token so offsets cover the whole string.
+        for m in re.finditer(r"\w+|[^\w\s]", text, re.UNICODE):
+            surface = m.group()
+            if surface.isalnum() or "'" in surface:
+                lemma, pos = self._analyse(surface)
+            else:
+                lemma, pos = surface, "Punc"
+            tokens.append(Token(
+                surface=surface,
+                lemma=lemma,
+                pos=pos,
+                char_start=m.start(),
+                char_end=m.end(),
+                content=pos in self.CONTENT_POS and len(surface) > 1,
+            ))
+        return tokens
+
+
 def get_tokeniser(language: str):
     if language == "ko":
         return KoreanTokeniser()
     if language == "zh":
         return ChineseTokeniser()
-    raise ValueError(f"no tokeniser for language {language!r} (expected 'ko' or 'zh')")
+    if language == "tr":
+        return TurkishTokeniser()
+    raise ValueError(
+        f"no tokeniser for language {language!r} (expected 'ko', 'zh' or 'tr')"
+    )

@@ -54,7 +54,7 @@ router.post("/", async (req, res) => {
     const entry = await lookup(video?.language, token.lemma, token.surface);
 
     const saved = await SavedWord.findOneAndUpdate(
-      { videoId, lemma: token.lemma },
+      { videoId, source: "upload", lemma: token.lemma },
       {
         videoId,
         segmentId,
@@ -77,6 +77,40 @@ router.post("/", async (req, res) => {
     res.status(201).json(saved);
   } catch (err) {
     console.error("save word failed:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Saved from the browser extension. There is no video and no timings — DRM
+// leaves only the subtitle text — so this stores what it can and is honest
+// about the rest by leaving the clip fields empty.
+router.post("/external", async (req, res) => {
+  try {
+    const { language, lemma, surface, pos, sentence, source, sourceUrl } = req.body;
+    if (!language || !lemma) {
+      return res.status(400).json({ error: "language and lemma are required" });
+    }
+    const entry = await lookup(language, lemma, surface);
+    const saved = await SavedWord.findOneAndUpdate(
+      { videoId: null, source: source || "extension", lemma },
+      {
+        videoId: null,
+        segmentId: null,
+        language,
+        lemma,
+        surface: surface || lemma,
+        pos: pos || "",
+        sentence: sentence || "",
+        source: source || "extension",
+        sourceUrl: sourceUrl || "",
+        senses: entry?.senses ?? [],
+        pinyin: entry?.pinyin ?? "",
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true },
+    );
+    res.status(201).json(saved);
+  } catch (err) {
+    console.error("external save failed:", err);
     res.status(500).json({ error: err.message });
   }
 });

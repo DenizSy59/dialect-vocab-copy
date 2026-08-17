@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      body {
+        width: 250px;
+        margin: 0;
+        padding: 14px;
+        background: #05070f;
+        color: #e8edff;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        font-size: 13px;
+      }
+      h1 {
+        font-size: 11px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: #22d3ee;
+        margin: 0 0 12px;
+      }
+      label {
+        display: block;
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #5b6788;
+        margin-bottom: 5px;
+      }
+      select {
+        width: 100%;
+        padding: 7px 9px;
+        background: #03040a;
+        color: #e8edff;
+        border: 1px solid rgba(126, 160, 255, 0.3);
+        border-radius: 7px;
+        font: inherit;
+      }
+      p {
+        color: #96a3c8;
+        line-height: 1.5;
+        font-size: 11.5px;
+        margin: 12px 0 0;
+      }
+      .status {
+        margin-top: 12px;
+        font-family: ui-monospace, Menlo, monospace;
+        font-size: 10.5px;
+        color: #5b6788;
+      }
+      .ok {
+        color: #34d399;
+      }
+      .bad {
+        color: #fb7185;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Lexicon</h1>
+
+    <label for="lang">Subtitle language</label>
+    <select id="lang">
+      <option value="ko">Korean</option>
+      <option value="zh">Chinese</option>
+      <option value="tr">Turkish</option>
+    </select>
+
+    <!-- Asked here rather than detected, because on this route there is no
+         audio to detect from — only the text the player rendered. -->
+    <p>
+      The language cannot be detected on streaming platforms: DRM means there is
+      no readable audio, only the subtitle text.
+    </p>
+
+    <div class="status" id="status">checking Lexicon…</div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

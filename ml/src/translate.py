@@ -29,6 +29,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 MODELS = {
     "ko": "Helsinki-NLP/opus-mt-ko-en",
     "zh": "Helsinki-NLP/opus-mt-zh-en",
+    "tr": "Helsinki-NLP/opus-mt-tr-en",
 }
 
 # Marian is trained on single sentences. Long inputs get truncated, so batches

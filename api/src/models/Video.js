@@ -6,8 +6,10 @@ const videoSchema = new mongoose.Schema(
   {
     originalName: { type: String, required: true },
     filename: { type: String, required: true }, // on disk, under uploadDir
-    language: { type: String, enum: ["ko", "zh"], required: true },
-    model: { type: String, default: "small" },
+    // "auto" until the worker detects it, then replaced with the real code.
+    language: { type: String, enum: ["ko", "zh", "tr", "auto"], required: true },
+    languageConfidence: { type: Number, default: null },
+    model: { type: String, default: "auto" },
 
     status: {
       type: String,
