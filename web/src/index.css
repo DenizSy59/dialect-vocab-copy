@@ -491,6 +491,47 @@ label.field {
   min-width: 46px;
 }
 
+.sub-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* The second track. Deliberately smaller and dimmer than the target language:
+ * it is a crutch, and if it reads as loudly as the original the eye goes there
+ * first and no learning happens. */
+.sub-en {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-faint);
+  padding-left: 1px;
+  border-left: 2px solid var(--line);
+  padding-left: 9px;
+  margin-top: 3px;
+}
+
+.sub-line.on .sub-en {
+  color: var(--text-dim);
+  border-left-color: var(--line-bright);
+}
+
+.toggle {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  padding: 3px 8px;
+  border-radius: 5px;
+  color: var(--text-faint);
+}
+
+.toggle.on {
+  color: var(--cyan);
+  border-color: var(--cyan);
+  background: rgba(34, 211, 238, 0.12);
+}
+
 .sub-text {
   font-family: var(--font-cjk);
   /* Large and loose: this is the text the learner reads, and CJK needs more
@@ -804,4 +845,14 @@ label.field {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(126, 160, 255, 0.35);
+}
+
+/* Sentence translation on a saved card. Same reasoning as the subtitle track:
+ * quieter than the original so the eye lands on the target language first. */
+.word-sentence-en {
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-top: 4px;
+  line-height: 1.45;
+  font-style: italic;
 }

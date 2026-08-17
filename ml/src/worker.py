@@ -73,6 +73,7 @@ def store_result(video_id, result: dict) -> None:
             "start": seg["start"],
             "end": seg["end"],
             "text": seg["text"],
+            "english": seg.get("english", ""),
             "words": seg["words"],
             "tokens": [
                 {

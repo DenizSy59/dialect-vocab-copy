@@ -18,6 +18,7 @@ from typing import Optional
 from lemmatise import get_tokeniser, Token
 from difficulty import score_all
 from dialect import detect, annotate_segments
+from translate import translate_segments
 
 
 def pick_device(requested: str = "auto") -> tuple[str, str]:
@@ -137,7 +138,8 @@ class Pipeline:
 
     def __init__(self, language: str, model: str = "large-v3",
                  device: str = "auto", script: str = "simplified",
-                 batch_size: int = 16, quiet: bool = False):
+                 batch_size: int = 16, quiet: bool = False,
+                 translate: bool = True):
         import whisperx
 
         self.language = language
@@ -169,6 +171,19 @@ class Pipeline:
         self.tokenise = get_tokeniser(language)
         # Only Chinese needs script normalising; Korean has one script.
         self.normalise = ScriptNormaliser(script if language == "zh" else "none")
+
+        # Loaded eagerly so the cost lands at worker startup rather than in the
+        # middle of the first job, where it would look like a stall.
+        self.translator = None
+        if translate:
+            try:
+                from translate import Translator
+                self._log("loading translation model")
+                self.translator = Translator(language, self.device)
+            except Exception as e:
+                # A missing translation model must not take the transcript with
+                # it — English subtitles are an addition, not the product.
+                self._log(f"translation unavailable, continuing without it: {e}")
 
     def _log(self, msg: str):
         if not self.quiet:
@@ -220,6 +235,7 @@ class Pipeline:
                 "start": seg.get("start"),
                 "end": seg.get("end"),
                 "text": text,
+                "english": "",  # filled in below when translation is enabled
                 "words": [{"word": w.get("word"), "start": w.get("start"),
                            "end": w.get("end"), "score": w.get("score")}
                           for w in words],
@@ -232,6 +248,12 @@ class Pipeline:
         score_all(segments, self.language)
         annotate_segments(segments, self.language)
         dialect_result = detect(segments, self.language)
+
+        translate_sec = 0.0
+        if self.translator is not None:
+            t0 = time.time()
+            translate_segments(segments, self.language, translator=self.translator)
+            translate_sec = time.time() - t0
 
         def pct(n, d):
             return round(100.0 * n / d, 1) if d else 0.0
@@ -249,6 +271,7 @@ class Pipeline:
             "timing": {
                 "transcribe_sec": round(transcribe_sec, 2),
                 "align_sec": round(align_sec, 2),
+                "translate_sec": round(translate_sec, 2),
                 "compute_sec": round(transcribe_sec + align_sec, 2),
                 "total_sec": round(elapsed, 2),
                 "compute_realtime_factor": (

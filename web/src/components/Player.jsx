@@ -127,7 +127,9 @@ function Tok({ run, token, language, saved, onSave }) {
   );
 }
 
-function SubtitleLine({ segment, language, active, savedLemmas, onSeek, onSaveWord }) {
+function SubtitleLine({
+  segment, language, active, savedLemmas, onSeek, onSaveWord, showEnglish,
+}) {
   const runs = useMemo(
     () => ownership(segment.text, segment.tokens || []),
     [segment],
@@ -138,6 +140,7 @@ function SubtitleLine({ segment, language, active, savedLemmas, onSeek, onSaveWo
       <span className="sub-time" onClick={() => onSeek(segment.start)}>
         {fmt(segment.start)}
       </span>
+      <span className="sub-body">
       <span className="sub-text">
         {runs.map((run, i) => {
           const token = run.tokenIndex >= 0 ? segment.tokens[run.tokenIndex] : null;
@@ -153,6 +156,10 @@ function SubtitleLine({ segment, language, active, savedLemmas, onSeek, onSaveWo
           );
         })}
       </span>
+      {showEnglish && segment.english && (
+        <span className="sub-en">{segment.english}</span>
+      )}
+      </span>
     </div>
   );
 }
@@ -161,6 +168,10 @@ export function Player({ video, segments, savedLemmas, onSaveWord }) {
   const videoRef = useRef(null);
   const listRef = useRef(null);
   const [time, setTime] = useState(0);
+  // On by default. A learner who does not want the crutch can turn it off, but
+  // hiding it by default would mean most people never find it.
+  const [showEnglish, setShowEnglish] = useState(true);
+  const hasEnglish = segments.some((s) => s.english);
 
   // timeupdate fires about four times a second, which is visibly late for
   // highlighting a word. rAF while playing keeps the subtitle in step.
@@ -236,6 +247,15 @@ export function Player({ video, segments, savedLemmas, onSaveWord }) {
       <div className="panel-head" style={{ borderTop: "1px solid var(--line)" }}>
         <span>◇</span> Transcript
         <span className="spacer" />
+        {hasEnglish && (
+          <button
+            className={`toggle ${showEnglish ? "on" : ""}`}
+            onClick={() => setShowEnglish((v) => !v)}
+            title="Second subtitle track"
+          >
+            EN
+          </button>
+        )}
         {segments.some((s) => s.difficulty != null) && (
           <span className="legend">
             easy <span className="legend-ramp" /> hard
@@ -256,6 +276,7 @@ export function Player({ video, segments, savedLemmas, onSaveWord }) {
             savedLemmas={savedLemmas}
             onSeek={seek}
             onSaveWord={onSaveWord}
+            showEnglish={showEnglish}
           />
         ))}
       </div>

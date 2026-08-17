@@ -34,6 +34,9 @@ const segmentSchema = new mongoose.Schema({
   start: Number,
   end: Number,
   text: String,
+  // Second subtitle track. Empty when translation was unavailable — the
+  // transcript is the product and must not depend on it.
+  english: { type: String, default: "" },
   words: [wordSchema],
   tokens: [tokenSchema],
 

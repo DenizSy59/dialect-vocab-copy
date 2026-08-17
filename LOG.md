@@ -585,6 +585,48 @@ error occurred when fetching the script". That looks like a restriction of that
 browser rather than a fault in the code, but it is unproven either way — check
 it in real Chrome or Safari before claiming the deliverable.
 
+### Dual English subtitles
+
+The last week-6 deliverable. Two ways to get English, and the choice mattered
+more than it looked:
+
+1. **Whisper's own translate task.** Better English, but it re-segments the audio
+   independently, so its lines do not correspond to the native lines. For a dual
+   track that is the wrong shape — you would be matching two segmentations by
+   time overlap and putting partial sentences under each other. It also roughly
+   doubles transcription time.
+2. **A translation model over the segments that already exist.** Exactly one
+   English line per native line, which is what a dual track needs.
+
+Went with 2, using Marian (opus-mt), about 300 MB per language pair, a second or
+two on CPU for a short clip.
+
+The trade-off is real and worth stating: Marian's English is rougher than
+Whisper's, especially from Korean. It is a reading aid for someone who has the
+original in front of them, not a translation to quote. Comparing the two
+properly would be a reasonable thing to measure later.
+
+Sample output on the interview clip, showing both the quality and its limits:
+
+| Korean | English |
+|---|---|
+| 안녕하세요. | Hello. |
+| 손호준입니다. | It's Sonho Joon. |
+| 저는 왼쪽 공격수를 맡고 있고… | I'm on the left-hand side of the attack, and I've got the advantage of… |
+
+Note the second line: the name is transliterated rather than kept, and the
+fourth segment translates 짠할, which is itself a mis-transcription. **Translation
+inherits every ASR error upstream of it** and presents it in confident English,
+which is arguably more misleading than the original Korean was.
+
+Implementation notes: translation failure is caught and the transcript continues
+without it, because English is an addition and the transcript is the product.
+Empty segments are held out of the batch — Marian emits garbage for empty input
+rather than nothing. In the UI the English is deliberately smaller and dimmer
+than the target language, with a toggle: if the crutch reads as loudly as the
+original, the eye goes there first and no learning happens. The sentence
+translation also lands on saved cards and in the Anki export.
+
 ### Still open
 
 - Re-run on the 4090 to confirm the numbers match and get realistic timings.

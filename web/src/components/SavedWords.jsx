@@ -72,6 +72,9 @@ export function SavedWords({ words, onChanged, videoId }) {
               </div>
             )}
             <div className="word-sentence">{w.sentence}</div>
+            {w.sentenceEnglish && (
+              <div className="word-sentence-en">{w.sentenceEnglish}</div>
+            )}
             {w.confidence != null && w.confidence < LOW_CONFIDENCE && (
               <div className="warn">
                 ⚠ low alignment confidence ({w.confidence.toFixed(2)}) — may be

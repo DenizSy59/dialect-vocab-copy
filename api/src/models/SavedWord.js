@@ -13,6 +13,7 @@ const savedWordSchema = new mongoose.Schema(
     pos: String,
 
     sentence: String, // the full segment text, for context on the card
+    sentenceEnglish: { type: String, default: "" }, // second track, if available
     start: Number, // word timing within the video
     end: Number,
 
