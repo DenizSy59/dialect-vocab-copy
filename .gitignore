@@ -13,11 +13,13 @@ build/
 .env
 .env.local
 
-# Model weights and caches
+# Model weights and caches.
+# Anchored to ml/ — a bare "models/" also swallowed api/src/models/, which
+# silently left every Mongoose schema out of the repo.
 *.pt
 *.bin
 .cache/
-models/
+/ml/models/
 
 # Media and pipeline output — big, regenerable, never committed.
 # Corpora are downloaded by scripts, so the manifest is enough to reproduce.
