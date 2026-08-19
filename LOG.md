@@ -627,6 +627,74 @@ than the target language, with a toggle: if the crutch reads as loudly as the
 original, the eye goes there first and no learning happens. The sentence
 translation also lands on saved cards and in the Anki export.
 
+### Turkish, actually finished
+
+Turkish had been *plumbed in* — tokeniser, dictionary, interface strings, code
+paths accepting `tr` — but no Turkish audio had ever been through the pipeline,
+there was no test set, the alignment model had never been loaded, and
+`dialect_markers.json` contained only `ko` and `zh`. Claiming it was done would
+have been wrong. Now measured:
+
+| lang | model | CER | content err | function err | concentration |
+|---|---|---|---|---|---|
+| tr | small | 0.034 | 0.119 | 0.154 | 0.95 |
+| tr | large-v3 | **0.014** | 0.046 | 0.091 | 0.83 |
+
+**Turkish is the most accurately transcribed of the three languages** — CER
+0.014 at large-v3 against 0.026 for Chinese and 0.067 for Korean. Coverage is
+100% and the wav2vec2 Turkish aligner works, so clips cut correctly.
+
+Dialect markers added for Kıbrıs, Karadeniz, Ege and Doğu. Validated in both
+directions: all four fire on constructed samples, standard Turkish stays at 0.0.
+The Kıbrıs list is the one worth checking first — it is the variety spoken where
+this project is being written and the author can judge it directly.
+
+### Two real bugs Turkish exposed
+
+**The evaluation harness could not handle a space-delimited language.**
+`normalise()` stripped all whitespace, which is right for Korean and Chinese —
+Whisper's spacing differs from the reference constantly and neither tokeniser
+depends on it — but for Turkish the space *is* the word boundary. The whole
+transcript collapsed into one token, and the first Turkish run reported a token
+error rate of 0.79 against a character error rate of 0.035, which is impossible
+and was the clue. Normalisation is language-aware now.
+
+Worth noting for the report: this bug could only ever appear when a third
+language was added. Two languages that both ignore spaces hid it completely.
+
+**Turkish lemmas were being picked by parse order.** zeyrek returns every
+reading it can construct, and çözümü parses both as çöz + üm ("my çöz") and
+çözüm + ü ("the solution"). Taking the first gave çöz, which is not a word
+anyone would put on a card. Now the most frequent lemma wins, using the wordfreq
+table already loaded for difficulty scoring. çözümü → çözüm.
+
+Also silenced zeyrek's parse logging, which it emits at WARNING level, so the
+worker output was unreadable.
+
+### The concentration finding, with three languages
+
+| language | concentration at large-v3 |
+|---|---|
+| Korean | **1.58** |
+| Chinese | 0.96 |
+| Turkish | 0.83 |
+
+Korean is the outlier, not the rule. That sharpens the result but it also
+introduces a caveat that has to go in the report:
+
+**The content/function split is not comparable across these languages, because
+the tokenisers cut at different granularity.** Korean has 326 content against
+362 function tokens because kiwi splits particles and endings into separate
+tokens. Turkish has 281 content against 77 function, because zeyrek fuses
+suffixes into the word they attach to. So Turkish "function words" are a much
+smaller and different category than Korean ones, and a ratio computed over them
+is not measuring the same thing.
+
+The Korean result stands on its own — within Korean, errors do favour content
+words at every model size. What cannot be claimed from this table is that Korean
+is *more* prone to it than Turkish, because the denominators differ. Fixing that
+properly needs a tokenisation-independent unit, which is its own piece of work.
+
 ### Still open
 
 - Re-run on the 4090 to confirm the numbers match and get realistic timings.

@@ -40,9 +40,16 @@ OUT = Path(__file__).parent.parent / "out"
 # output frequently drops it entirely — and a learner does not care, so it is
 # stripped before comparison rather than counted as an error.
 PUNCT = re.compile(r"[\s。，、！？；：（）「」『』〈〉《》—…·.,!?;:()\[\]{}\"'`~\-–—]+")
+PUNCT_KEEP_SPACE = re.compile(r"[。，、！？；：（）「」『』〈〉《》—…·.,!?;:()\[\]{}\"'`~\-–—]+")
+
+# Languages whose words are separated by spaces. For these the space is a word
+# boundary and removing it destroys the tokenisation; for Korean and Chinese it
+# is noise — Whisper's spacing differs from the reference constantly and the
+# tokenisers do not depend on it.
+SPACE_DELIMITED = {"tr"}
 
 
-def normalise(text: str) -> str:
+def normalise(text: str, language: str = "ko") -> str:
     """Fold away differences that are not transcription errors.
 
     Deliberately does NOT normalise numbers. FLEURS references spell them out
@@ -51,6 +58,9 @@ def normalise(text: str) -> str:
     the rates here are pessimistic and that is the safer direction to be wrong in.
     """
     text = unicodedata.normalize("NFKC", text)
+    if language in SPACE_DELIMITED:
+        # Strip punctuation but keep one space between words, then collapse.
+        return re.sub(r"\s+", " ", PUNCT_KEEP_SPACE.sub(" ", text)).strip().lower()
     return PUNCT.sub("", text).lower()
 
 
@@ -128,8 +138,8 @@ def main():
             path = DATA.parent / entry["file"]
         result = pipe.run(path)
 
-        hypothesis = normalise(" ".join(s["text"] for s in result["segments"]))
-        reference = normalise(entry["reference"])
+        hypothesis = normalise(" ".join(s["text"] for s in result["segments"]), args.language)
+        reference = normalise(entry["reference"], args.language)
 
         e, l = cer(reference, hypothesis)
         char_err += e
@@ -177,6 +187,12 @@ def main():
     def rate(a, b):
         return round(a / b, 4) if b else None
 
+    def fmt(x):
+        # A rate can legitimately be undefined — a language with no function
+        # words in the sample, say — and that should print as n/a rather than
+        # crashing after twenty clips of compute.
+        return f"{x:.3f}" if x is not None else "n/a"
+
     content_rate = rate(content_err, content_total)
     function_rate = rate(function_err, function_total)
 
@@ -217,10 +233,10 @@ def main():
 
     print()
     print(f"{args.language} / {args.model} / {len(entries)} clips / {audio_sec:.0f}s audio")
-    print(f"  character error rate      {summary['cer']:.3f}")
-    print(f"  token error rate          {summary['token_error_rate']:.3f}")
-    print(f"  content-word error rate   {content_rate:.3f}  ({content_total} tokens)")
-    print(f"  function-word error rate  {function_rate:.3f}  ({function_total} tokens)")
+    print(f"  character error rate      {fmt(summary['cer'])}")
+    print(f"  token error rate          {fmt(summary['token_error_rate'])}")
+    print(f"  content-word error rate   {fmt(content_rate)}  ({content_total} tokens)")
+    print(f"  function-word error rate  {fmt(function_rate)}  ({function_total} tokens)")
     print(f"  error concentration       {concentration}x  (>1 = errors cluster on content words)")
     print(f"wrote {out_path}")
 

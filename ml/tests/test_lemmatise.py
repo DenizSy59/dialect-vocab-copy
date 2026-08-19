@@ -133,3 +133,17 @@ class TestTurkish:
         for t in tr("Merhaba, nasılsın?"):
             if t.surface in (",", "?"):
                 assert t.content is False
+
+
+class TestTurkishAmbiguity:
+    """zeyrek returns every reading; the most frequent lemma should win."""
+
+    @pytest.fixture(scope="class")
+    def tr(self):
+        return get_tokeniser("tr")
+
+    def test_cozumu_is_cozum_not_coz(self, tr):
+        # Parses as both çöz+üm ("my çöz") and çözüm+ü ("the solution").
+        # Parse order gave çöz, which is not a word worth saving.
+        assert "çözüm" in lemmas(tr("Teknoloji çözümü getirir"))
+        assert "çöz" not in lemmas(tr("Teknoloji çözümü getirir"))

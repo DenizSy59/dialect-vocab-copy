@@ -146,15 +146,35 @@ class TurkishTokeniser:
         import logging
         import zeyrek
 
-        # zeyrek logs every candidate parse at INFO, which floods the worker.
-        logging.getLogger("zeyrek").setLevel(logging.WARNING)
-        for name in ("zeyrek.morphology", "zeyrek.rulebasedanalyzer"):
-            logging.getLogger(name).setLevel(logging.WARNING)
+        # zeyrek logs every candidate parse it considers — at WARNING level, so
+        # setting INFO is not enough. Without this the worker output is
+        # unreadable and a real warning would be lost in it.
+        logging.getLogger("zeyrek.rulebasedanalyzer").setLevel(logging.ERROR)
+        logging.getLogger("zeyrek").setLevel(logging.ERROR)
 
         self.analyzer = zeyrek.MorphAnalyzer()
+        self._freq = None
+
+    def _frequency(self, word: str) -> float:
+        """How common a lemma is, for choosing between parses."""
+        if self._freq is None:
+            from wordfreq import get_frequency_dict
+            self._freq = get_frequency_dict("tr")
+        return self._freq.get(word.lower(), 0.0)
 
     def _analyse(self, word: str):
-        """Return (lemma, pos). Falls back to the surface form when unknown."""
+        """Return (lemma, pos). Falls back to the surface form when unknown.
+
+        Turkish morphology is ambiguous and zeyrek returns every reading it can
+        construct. çözümü parses both as çöz + üm ("my çöz") and as çözüm + ü
+        ("the solution"), and taking the first reading gave çöz — which is not a
+        word a learner would ever want on a card.
+
+        Picking the most frequent lemma resolves it: çözüm is common, çöz as a
+        bare noun is not. This is a heuristic, and it will pick wrongly when a
+        rare word genuinely was meant, but it is right far more often than
+        trusting parse order.
+        """
         try:
             parses = self.analyzer.analyze(word)
         except Exception:
@@ -162,9 +182,11 @@ class TurkishTokeniser:
         flat = [p for group in parses for p in group] if parses else []
         if not flat:
             return word, ""
-        # First parse is zeyrek's best guess; taking the shortest lemma among
-        # equally-ranked parses avoids preferring a derived form over the root.
-        best = flat[0]
+
+        best = max(
+            flat,
+            key=lambda p: (self._frequency(p.lemma or ""), len(p.lemma or "")),
+        )
         return best.lemma or word, best.pos or ""
 
     def __call__(self, text: str) -> List[Token]:

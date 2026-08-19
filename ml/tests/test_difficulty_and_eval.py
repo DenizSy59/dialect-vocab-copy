@@ -113,3 +113,21 @@ def test_clamp01():
     assert clamp01(-5) == 0.0
     assert clamp01(5) == 1.0
     assert clamp01(0.5) == 0.5
+
+
+class TestSpaceDelimitedNormalisation:
+    """Turkish exposed this: stripping spaces destroyed its word boundaries."""
+
+    def test_turkish_keeps_word_boundaries(self):
+        assert normalise("Teknoloji, çözümü sanal bir tur.", "tr") == (
+            "teknoloji çözümü sanal bir tur"
+        )
+
+    def test_korean_still_drops_spaces(self):
+        # Whisper's Korean spacing differs from the reference constantly and
+        # counting it as an error would inflate every rate.
+        assert normalise("안녕하세요. 반갑습니다", "ko") == "안녕하세요반갑습니다"
+
+    def test_turkish_punctuation_becomes_a_boundary(self):
+        # "bir,tur" must not fuse into one token when the comma is removed.
+        assert normalise("bir,tur", "tr") == "bir tur"
