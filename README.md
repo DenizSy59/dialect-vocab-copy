@@ -62,6 +62,21 @@ Mac for the Node API and React app only.
 
 ## Running the whole thing
 
+```bash
+./run.sh
+```
+
+Starts Redis, MongoDB, the API and the worker, **detached**, and prints the URL.
+`./run.sh status` shows what is up, `./run.sh logs` tails both logs, `./run.sh
+stop` stops the API and worker.
+
+Detached matters: run as ordinary background jobs these die with the terminal
+that launched them, and when they die the site serves nothing — which looks
+exactly like a broken front end. If the page is blank, check `./run.sh status`
+before anything else.
+
+### Or by hand
+
 Four processes. Services first:
 
 ```bash
