@@ -2,12 +2,17 @@
   "manifest_version": 3,
   "name": "Lexicon — vocabulary from streaming subtitles",
   "version": "0.1.0",
-  "description": "Click words in Netflix, Prime Video and GagaOOLala subtitles to save them to your Lexicon deck.",
-  "permissions": ["storage", "activeTab"],
+  "description": "Click words in Netflix, Prime Video, Viki, iQIYI and GagaOOLala subtitles to save them to your Lexicon deck. You log in to the platform yourself; this never sees your account.",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
   "host_permissions": [
     "http://localhost:4000/*",
     "https://www.netflix.com/*",
     "https://www.primevideo.com/*",
+    "https://www.viki.com/*",
+    "https://www.iq.com/*",
     "https://www.gagaoolala.com/*"
   ],
   "content_scripts": [
@@ -15,10 +20,17 @@
       "matches": [
         "https://www.netflix.com/watch/*",
         "https://www.primevideo.com/*",
-        "https://www.gagaoolala.com/*"
+        "https://www.viki.com/*",
+        "https://www.iq.com/*",
+        "https://www.gagaoolala.com/*",
+        "http://localhost:4000/extension-test.html"
       ],
-      "js": ["content.js"],
-      "css": ["overlay.css"],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "overlay.css"
+      ],
       "run_at": "document_idle"
     }
   ],

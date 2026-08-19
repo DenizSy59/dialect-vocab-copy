@@ -90,20 +90,54 @@ function ExtensionPanel({ platform }) {
         </div>
         <p className="source-detail">{platform.detail}</p>
 
-        <h4 className="mini-head">How it works instead</h4>
+        <h4 className="mini-head">Install the extension</h4>
         <ol className="steps">
-          <li>Install the browser extension from <code>extension/</code>.</li>
           <li>
-            Open {platform.name} normally and start playing something with
-            subtitles in your target language.
+            Open <code>chrome://extensions</code> and turn on{" "}
+            <strong>Developer mode</strong> (top right).
           </li>
           <li>
-            The extension reads the subtitle track the page already loaded,
-            sends the text here to be tokenised and looked up, and overlays
-            clickable words on top of the player.
+            Click <strong>Load unpacked</strong> and choose the{" "}
+            <code>extension/</code> folder in the project.
+          </li>
+          <li>
+            Click the Lexicon icon in the toolbar and pick your{" "}
+            <strong>subtitle language</strong>. It cannot be detected on this
+            route — there is no readable audio, only text.
+          </li>
+        </ol>
+
+        <h4 className="mini-head">Then use {platform.name} normally</h4>
+        <ol className="steps">
+          <li>
+            <strong>Log in to {platform.name} yourself</strong>, in your own
+            browser, exactly as you always do. The extension never sees your
+            account, your password or your payment details — it only reads text
+            already on the page.
+          </li>
+          <li>Play something with subtitles in your target language.</li>
+          <li>
+            A <code>LEXICON</code> bar appears under the player with the same
+            line, content words underlined. Click one to save it.
           </li>
           <li>Saved words land in the same deck as everything else.</li>
         </ol>
+
+        {/* Verifying against a real login is slow and risks looking broken for
+            reasons that have nothing to do with the extension, so there is a
+            local page that mimics the same DOM. */}
+        <h4 className="mini-head">Check it works first</h4>
+        <p className="source-detail">
+          Before trying it on {platform.name}, open the test page below. It
+          reproduces the same player structure locally and reports exactly what
+          is and is not working, so a problem points at a cause instead of
+          looking dead.
+        </p>
+        <a href="/extension-test.html" target="_blank" rel="noreferrer">
+          <button className="primary" style={{ marginTop: 10 }}>
+            Open the extension test page
+          </button>
+        </a>
 
         <div className="notice">
           Because the audio is encrypted, there are no word-level timings on this

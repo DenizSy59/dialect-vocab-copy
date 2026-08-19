@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Lexicon — extension test harness</title>
+    <style>
+      /* Reproduces the shape of a streaming player: a <video> with a subtitle
+       * container positioned over its lower half, using Netflix's class names.
+       * The extension cannot tell this apart from the real thing, which is the
+       * point — it can be verified without a subscription or a login. */
+      body {
+        margin: 0;
+        background: #05070f;
+        color: #e8edff;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+      }
+      .wrap { max-width: 940px; margin: 0 auto; padding: 26px 20px 80px; }
+      h1 { font-size: 20px; margin: 0 0 6px; }
+      p  { color: #96a3c8; font-size: 14px; line-height: 1.6; }
+      code {
+        font-family: ui-monospace, Menlo, monospace;
+        background: rgba(126,160,255,.12); padding: 1px 6px;
+        border-radius: 4px; color: #22d3ee; font-size: 12.5px;
+      }
+      .player {
+        position: relative; background: #000; border-radius: 12px;
+        overflow: hidden; border: 1px solid rgba(126,160,255,.2); margin: 20px 0;
+      }
+      video { display: block; width: 100%; background: #000; }
+      /* Netflix's own class names, on purpose. */
+      .player-timedtext {
+        position: absolute; left: 0; right: 0; bottom: 12%;
+        text-align: center; pointer-events: none;
+      }
+      .player-timedtext-text-container {
+        display: inline-block; font-size: 26px; line-height: 1.5; color: #fff;
+        text-shadow: 0 2px 6px rgba(0,0,0,.9); padding: 2px 10px;
+      }
+      .controls { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0; }
+      button {
+        font: inherit; cursor: pointer; padding: 8px 14px; border-radius: 8px;
+        background: rgba(126,160,255,.1); color: #e8edff;
+        border: 1px solid rgba(126,160,255,.3);
+      }
+      button:hover { border-color: #22d3ee; }
+      .checks { border: 1px solid rgba(126,160,255,.18); border-radius: 10px; padding: 14px 16px; }
+      .check { display: flex; gap: 9px; padding: 5px 0; font-size: 13.5px; align-items: baseline; }
+      .dot { width: 8px; height: 8px; border-radius: 50%; background: #5b6788; flex: none; margin-top: 6px; }
+      .ok .dot { background: #34d399; }
+      .bad .dot { background: #fb7185; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Extension test harness</h1>
+      <p>
+        This page pretends to be a streaming player. It uses the same DOM shape
+        and class names Netflix uses, so the extension treats it as the real
+        thing — which means you can check the whole flow works
+        <strong>before</strong> going near your Netflix account. Nothing here
+        touches Netflix, and no login is involved anywhere.
+      </p>
+
+      <div class="player">
+        <video id="v" muted playsinline></video>
+        <div class="player-timedtext">
+          <div class="player-timedtext-text-container" id="cue"></div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button onclick="setLang('ko')">Korean lines</button>
+        <button onclick="setLang('zh')">Chinese lines</button>
+        <button onclick="setLang('tr')">Turkish lines</button>
+        <button onclick="next()">Next subtitle</button>
+        <button onclick="toggle()">Auto-advance</button>
+      </div>
+
+      <div class="checks" id="checks"></div>
+
+      <p style="margin-top:18px">
+        If the extension is working you will see a <code>LEXICON</code> bar with
+        the same line rendered underneath, with content words underlined. Click
+        one and it turns green, and it appears in your deck at
+        <code>localhost:4000</code>.
+      </p>
+    </div>
+
+    <script>
+      const LINES = {
+        ko: [
+          "안녕하세요. 반갑습니다.",
+          "저는 왼쪽 공격수를 맡고 있습니다.",
+          "오늘 날씨가 정말 좋네요.",
+          "친구랑 밥을 먹었어요.",
+        ],
+        zh: [
+          "我昨天跟朋友一起吃饭了。",
+          "因为远离大陆，哺乳动物无法长途跋涉而来。",
+          "今天天气非常好。",
+        ],
+        tr: [
+          "Dün arkadaşlarımla güzel bir film izledim.",
+          "Teknoloji çözümü sanal bir tur sunarak getirir.",
+          "Bugün hava gerçekten çok güzel.",
+        ],
+      };
+
+      let lang = "ko";
+      let i = 0;
+      let timer = null;
+      const cue = document.getElementById("cue");
+
+      function show() { cue.textContent = LINES[lang][i % LINES[lang].length]; }
+      function next() { i++; show(); }
+      function setLang(l) { lang = l; i = 0; show(); }
+      function toggle() {
+        if (timer) { clearInterval(timer); timer = null; }
+        else { timer = setInterval(next, 3500); }
+      }
+      show();
+
+      // A silent generated video, so there is a real <video> element with real
+      // dimensions for the extension's structural fallback to find.
+      const c = document.createElement("canvas");
+      c.width = 960; c.height = 540;
+      const ctx = c.getContext("2d");
+      (function paint() {
+        ctx.fillStyle = "#11162a"; ctx.fillRect(0, 0, c.width, c.height);
+        ctx.fillStyle = "#22d3ee"; ctx.font = "600 22px system-ui";
+        ctx.fillText("test player", 30, 44);
+        requestAnimationFrame(paint);
+      })();
+      document.getElementById("v").srcObject = c.captureStream(12);
+      document.getElementById("v").play().catch(() => {});
+
+      // Report what is and is not working, so a failure points at a cause
+      // rather than just looking dead.
+      async function runChecks() {
+        const out = [];
+        const overlay = document.querySelector(".lexicon-overlay");
+        out.push([!!overlay, overlay
+          ? "Extension is loaded and injected its overlay"
+          : "Extension overlay not found — is it installed and enabled for this page?"]);
+
+        let api = false;
+        try {
+          const r = await fetch("http://localhost:4000/api/health");
+          api = r.ok;
+        } catch {}
+        out.push([api, api
+          ? "Lexicon API is reachable on :4000"
+          : "Lexicon API not reachable — run ./run.sh"]);
+
+        const toks = overlay ? overlay.querySelectorAll(".lexicon-tok").length : 0;
+        out.push([toks > 0, toks > 0
+          ? `Subtitle tokenised — ${toks} clickable words`
+          : "No clickable words yet (needs both of the above)"]);
+
+        document.getElementById("checks").innerHTML = out.map(
+          ([ok, text]) =>
+            `<div class="check ${ok ? "ok" : "bad"}"><span class="dot"></span><span>${text}</span></div>`,
+        ).join("");
+      }
+      runChecks();
+      setInterval(runChecks, 2000);
+    </script>
+  </body>
+</html>
