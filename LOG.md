@@ -695,6 +695,69 @@ words at every model size. What cannot be claimed from this table is that Korean
 is *more* prone to it than Turkish, because the denominators differ. Fixing that
 properly needs a tokenisation-independent unit, which is its own piece of work.
 
+### Related work — what other projects actually do
+
+Went looking for prior art rather than continuing to argue from first
+principles about the streaming problem. The most relevant find by a distance:
+
+**asbplayer** (github.com/asbplayer/asbplayer, ~1,400 stars, actively
+developed) — "browser-based media player and Chrome extension for subtitle
+sentence mining". That is the same use case as this project's streaming half:
+watch something, mine words with their sentence, export to Anki.
+
+What matters is its architecture, because it answers a question that had been
+going in circles here. Its repository contains `client/` and `extension/` and
+**no desktop or Electron directory at all**. A project that has been solving
+exactly this problem for years, with a real user base, chose a web client plus
+a browser extension.
+
+It also does *both* of the routes built here, which is a useful independent
+confirmation that neither was a wrong turn:
+
+| asbplayer | here |
+|---|---|
+| auto-detects subtitles on Netflix and YouTube | extension reads the platform's subtitle track |
+| drag a subtitle file onto a streaming video | subtitle companion |
+| subtitle timing adjustment | sync offset control |
+| mine to Anki via AnkiConnect | Anki TSV export |
+
+Others in the space: **dual-captions** (240 stars, archived 2022),
+**MouseTooltipTranslator** (1,300 stars), and several small Netflix dual-subtitle
+extensions. All browser extensions. **Metastream** (2,600 stars) is the one
+Electron project nearby — watch-together rather than language learning — and its
+Widevine issue is closed without Netflix working.
+
+Nobody ships a desktop app that plays Netflix. That is worth stating in the
+report's related-work section, because "why is this a browser extension" is an
+obvious question from an examiner and the answer is now evidenced rather than
+asserted.
+
+One technique worth stealing: asbplayer *auto-detects* subtitles on Netflix
+rather than scraping the rendered DOM. Intercepting the subtitle payload the
+player fetches would be far more robust than the CSS selectors used here, which
+break whenever a platform changes its markup. Not built yet; noted as the next
+improvement to the extension.
+
+### Netflix in a desktop shell — tested, not concluded
+
+Built a minimal castlabs Electron shell (`desktop/`) to test the claim directly,
+after asserting four times from a single StackOverflow answer that it could not
+work. That was not good enough, and the test contradicted part of it:
+
+- Widevine CDM loads fine — version 4.10.3050.0, status `updated`
+- netflix.com loads and redirects to its login page exactly as in Chrome
+- no M7xxx error at any point
+
+The remaining unknown is playback after login, which is where Netflix asks for a
+licence and where the reported errors appear. That needs a real account, so it
+is for the author to run, not for me.
+
+Correction worth recording: the earlier claim that castlabs requires a paid
+signing certificate is out of date — it is free now, with self-signing through
+their portal. The claim that Rave holds a Netflix partnership rests on one
+StackOverflow answer citing a LinkedIn profile, and should be treated as
+unverified rather than fact.
+
 ### Still open
 
 - Re-run on the 4090 to confirm the numbers match and get realistic timings.
