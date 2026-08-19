@@ -7,6 +7,7 @@ import { SavedWords } from "./components/SavedWords.jsx";
 import { SourcePicker } from "./components/SourcePicker.jsx";
 import { PlatformPanel } from "./components/PlatformPanel.jsx";
 import { DeckLibrary } from "./components/DeckLibrary.jsx";
+import { Home } from "./components/Home.jsx";
 import { makeT, UI_LANGUAGES } from "./i18n.js";
 import { THEMES } from "./themes.js";
 
@@ -19,7 +20,9 @@ export default function App() {
   const [error, setError] = useState("");
   // Upload is the primary deliverable, so it is the default source. The others
   // are additions that can be removed without touching the core.
-  const [source, setSource] = useState("upload");
+  // null = the landing screen. The source choice is the first real decision
+  // in the app, so it is not made silently on the user's behalf.
+  const [source, setSource] = useState(null);
   const [platformLanguage, setPlatformLanguage] = useState("ko");
   // Both persisted: a theme or interface language that resets on reload is
   // worse than not offering the choice.
@@ -29,7 +32,7 @@ export default function App() {
   const [uiLanguage, setUiLanguage] = useState(
     () => localStorage.getItem("lexicon.ui") || "en",
   );
-  const [view, setView] = useState("player"); // player | deck
+  const [view, setView] = useState("home"); // home | player | deck
 
   const t = useMemo(() => makeT(uiLanguage), [uiLanguage]);
 
@@ -118,11 +121,17 @@ export default function App() {
         <div className="brand-sub">
           dialect-aware vocabulary from video · speech recognition
         </div>
+        {view !== "home" && (
+          <button className="toggle" onClick={() => setView("home")}>
+            ← {t("source")}
+          </button>
+        )}
+
         <span className="spacer" />
 
         <button
           className={`toggle ${view === "deck" ? "on" : ""}`}
-          onClick={() => setView(view === "deck" ? "player" : "deck")}
+          onClick={() => setView(view === "deck" ? "home" : "deck")}
         >
           ★ {t("library")}
         </button>
@@ -168,8 +177,16 @@ export default function App() {
           </div>
         )}
 
-        {view === "deck" ? (
-          <DeckLibrary t={t} uiLanguage={uiLanguage} onExit={() => setView("player")} />
+        {view === "home" ? (
+          <Home
+            t={t}
+            onPick={(id) => {
+              setSource(id);
+              setView("player");
+            }}
+          />
+        ) : view === "deck" ? (
+          <DeckLibrary t={t} uiLanguage={uiLanguage} onExit={() => setView("home")} />
         ) : (
         <div className="columns">
           <div>
