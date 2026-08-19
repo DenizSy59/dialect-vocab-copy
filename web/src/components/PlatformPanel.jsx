@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { PLATFORMS } from "./SourcePicker.jsx";
+import { ExtensionSetup } from "./ExtensionSetup.jsx";
+import { Companion } from "./Companion.jsx";
 
 // Accepts the usual forms: watch links, share links, embed links, or a bare id.
 function youtubeId(input) {
@@ -77,83 +79,40 @@ function YouTubePanel({ language, onLanguage }) {
   );
 }
 
-function ExtensionPanel({ platform }) {
-  return (
-    <div className="panel">
-      <div className="panel-head">
-        <span>{platform.icon}</span> {platform.name}
-      </div>
-      <div className="panel-body">
-        <div className="notice strong">
-          {platform.name} cannot be played inside this app, and no amount of work
-          here would change that.
-        </div>
-        <p className="source-detail">{platform.detail}</p>
-
-        <h4 className="mini-head">Install the extension</h4>
-        <ol className="steps">
-          <li>
-            Open <code>chrome://extensions</code> and turn on{" "}
-            <strong>Developer mode</strong> (top right).
-          </li>
-          <li>
-            Click <strong>Load unpacked</strong> and choose the{" "}
-            <code>extension/</code> folder in the project.
-          </li>
-          <li>
-            Click the Lexicon icon in the toolbar and pick your{" "}
-            <strong>subtitle language</strong>. It cannot be detected on this
-            route — there is no readable audio, only text.
-          </li>
-        </ol>
-
-        <h4 className="mini-head">Then use {platform.name} normally</h4>
-        <ol className="steps">
-          <li>
-            <strong>Log in to {platform.name} yourself</strong>, in your own
-            browser, exactly as you always do. The extension never sees your
-            account, your password or your payment details — it only reads text
-            already on the page.
-          </li>
-          <li>Play something with subtitles in your target language.</li>
-          <li>
-            A <code>LEXICON</code> bar appears under the player with the same
-            line, content words underlined. Click one to save it.
-          </li>
-          <li>Saved words land in the same deck as everything else.</li>
-        </ol>
-
-        {/* Verifying against a real login is slow and risks looking broken for
-            reasons that have nothing to do with the extension, so there is a
-            local page that mimics the same DOM. */}
-        <h4 className="mini-head">Check it works first</h4>
-        <p className="source-detail">
-          Before trying it on {platform.name}, open the test page below. It
-          reproduces the same player structure locally and reports exactly what
-          is and is not working, so a problem points at a cause instead of
-          looking dead.
-        </p>
-        <a href="/extension-test.html" target="_blank" rel="noreferrer">
-          <button className="primary" style={{ marginTop: 10 }}>
-            Open the extension test page
-          </button>
-        </a>
-
-        <div className="notice">
-          Because the audio is encrypted, there are no word-level timings on this
-          route — so no video clips, and dialect detection is text-only. That is
-          a DRM limitation, not an implementation gap.
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function PlatformPanel({ platformId, language, onLanguage }) {
   const platform = PLATFORMS.find((p) => p.id === platformId);
+  const [mode, setMode] = useState("companion");
   if (!platform) return null;
   if (platform.id === "youtube") {
     return <YouTubePanel language={language} onLanguage={onLanguage} />;
   }
-  return <ExtensionPanel platform={platform} />;
+
+  // Companion first, because it needs nothing installed and works everywhere.
+  // The extension is better when it works — it reads the platform's own live
+  // subtitle so sync is exact — but it is a Chrome install and it breaks when
+  // a platform changes its markup, so it is the second option rather than the
+  // first thing a new user is asked to do.
+  return (
+    <>
+      <div className="mode-switch">
+        <button
+          className={`toggle ${mode === "companion" ? "on" : ""}`}
+          onClick={() => setMode("companion")}
+        >
+          Subtitle companion · nothing to install
+        </button>
+        <button
+          className={`toggle ${mode === "extension" ? "on" : ""}`}
+          onClick={() => setMode("extension")}
+        >
+          Browser extension · overlays the real player
+        </button>
+      </div>
+      {mode === "companion" ? (
+        <Companion platform={platform} />
+      ) : (
+        <ExtensionSetup platform={platform} />
+      )}
+    </>
+  );
 }

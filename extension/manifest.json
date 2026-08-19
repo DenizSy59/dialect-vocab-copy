@@ -18,12 +18,12 @@
   "content_scripts": [
     {
       "matches": [
-        "https://www.netflix.com/watch/*",
+        "https://www.netflix.com/*",
         "https://www.primevideo.com/*",
         "https://www.viki.com/*",
         "https://www.iq.com/*",
         "https://www.gagaoolala.com/*",
-        "http://localhost:4000/extension-test.html"
+        "http://localhost:4000/*"
       ],
       "js": [
         "content.js"

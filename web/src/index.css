@@ -1323,3 +1323,166 @@ label.field {
   color: var(--text-dim);
   flex: 1;
 }
+
+/* ---------- Extension setup ---------- */
+
+.explain p { margin: 0 0 10px; font-size: 13.5px; line-height: 1.6; color: var(--text-dim); }
+.explain p strong { color: var(--text); }
+
+.why {
+  margin: 0 0 12px;
+  padding-left: 18px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-faint);
+}
+.why li { margin-bottom: 6px; }
+.why code {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  background: var(--sunken);
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: var(--rose);
+}
+
+/* The reassurance is the part people actually need, so it gets a colour of its
+ * own rather than sitting in the same grey as the bad news. */
+.ok-note {
+  border-left: 2px solid var(--emerald);
+  padding-left: 12px;
+  color: var(--text-dim) !important;
+}
+
+.step-row {
+  display: flex;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+}
+.step-row:last-of-type { border-bottom: none; }
+
+.step-num {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  border: 1px solid var(--line-bright);
+  color: var(--text-faint);
+}
+
+.step-row.done .step-num {
+  border-color: var(--emerald);
+  color: var(--emerald);
+  background: rgba(52, 211, 153, 0.12);
+}
+
+.step-title { font-size: 14px; font-weight: 600; }
+.step-row.done .step-title { color: var(--emerald); }
+
+.step-detail {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-dim);
+  margin-top: 3px;
+}
+.step-detail code {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  background: var(--sunken);
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: var(--cyan);
+}
+
+.setup-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+/* ---------- Subtitle companion ---------- */
+
+.mode-switch { display: flex; gap: 9px; margin-bottom: 16px; flex-wrap: wrap; }
+.mode-switch .toggle { font-family: var(--font-ui); font-size: 12px; letter-spacing: 0; padding: 8px 13px; }
+
+.companion { padding: 8px 20px 20px; }
+
+/* The current line dominates: during use this is the only thing being read. */
+.cue-stage {
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+  padding: 20px 10px;
+}
+
+.cue-now {
+  font-family: var(--font-cjk);
+  font-size: clamp(22px, 3vw, 34px);
+  line-height: 1.65;
+  color: var(--text);
+  max-width: 860px;
+}
+
+.cue-now.dim { color: var(--text-faint); font-size: 17px; }
+
+/* Neighbours are present for context but must not compete for attention. */
+.cue-side {
+  font-family: var(--font-cjk);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-faint);
+  max-width: 720px;
+  opacity: 0.65;
+}
+
+.transport {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.big-play { font-size: 15px; min-width: 56px; padding: 10px 0; }
+
+.clock {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: var(--cyan);
+  min-width: 56px;
+}
+
+.offset { display: inline-flex; align-items: center; gap: 7px; }
+.offset-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.offset-value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  min-width: 46px;
+  text-align: center;
+  color: var(--text);
+}
+
+.companion-hint {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text-faint);
+  line-height: 1.55;
+}

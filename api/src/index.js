@@ -17,6 +17,22 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// One line per API call. Added while debugging whether the browser extension
+// was reaching the server at all — without it, "nothing happens" and "nothing
+// was even requested" look identical, and they need completely different fixes.
+// Static assets are skipped so the log stays readable.
+app.use((req, res, next) => {
+  if (!req.path.startsWith("/api/")) return next();
+  const started = Date.now();
+  res.on("finish", () => {
+    console.log(
+      `${new Date().toISOString().slice(11, 19)} ${req.method} ${req.path} ` +
+        `${res.statusCode} ${Date.now() - started}ms`,
+    );
+  });
+  next();
+});
+
 // Serving uploads through express.static rather than a custom handler because
 // the player needs HTTP range requests to seek, and static already does that.
 app.use("/media", express.static(config.uploadDir, { acceptRanges: true }));

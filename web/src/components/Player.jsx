@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api.js";
+import { ownership } from "../tokens.js";
 
 /* Definition preview on hover.
  *
@@ -58,38 +59,6 @@ function difficultyColour(d) {
   if (d == null) return undefined;
   const hue = 145 - Math.max(0, Math.min(1, d)) * 145; // 145 green -> 0 red
   return `hsl(${hue} 70% 45%)`;
-}
-
-/* Decide which token owns each character of the segment text.
- *
- * Tokens can overlap: kiwi splits 왔 into 오/VV and 았/EP, both pointing at the
- * same character. Rendering token by token would print 오 and 었 where the
- * transcript says 왔. Assigning each character a single owner instead means the
- * original text always renders exactly once, and content tokens win ties so the
- * clickable region is the part worth saving.
- */
-function ownership(text, tokens) {
-  const owner = new Array(text.length).fill(-1);
-  const order = tokens
-    .map((t, i) => ({ t, i }))
-    .sort((a, b) => Number(b.t.content) - Number(a.t.content));
-
-  for (const { t, i } of order) {
-    for (let c = t.charStart; c < t.charEnd && c < text.length; c++) {
-      if (owner[c] === -1) owner[c] = i;
-    }
-  }
-
-  // Group runs of consecutive characters with the same owner into spans.
-  const runs = [];
-  let start = 0;
-  for (let c = 1; c <= text.length; c++) {
-    if (c === text.length || owner[c] !== owner[start]) {
-      runs.push({ text: text.slice(start, c), tokenIndex: owner[start] });
-      start = c;
-    }
-  }
-  return runs;
 }
 
 const POP_WIDTH = 280;

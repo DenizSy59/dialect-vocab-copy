@@ -72,13 +72,28 @@ const PLATFORMS = [
 
 const platform = PLATFORMS.find((p) => p.match.test(location.hostname));
 
+/* Announce presence to the Lexicon app.
+ *
+ * "Is the extension installed?" is otherwise unanswerable from a web page, so
+ * the setup screen could only ever show instructions and hope. With this marker
+ * it can show live status, which turns a blind chore into something with
+ * feedback. Set on every page of the app; the overlay below is not.
+ */
+document.documentElement.dataset.lexiconExtension =
+  chrome.runtime?.getManifest?.().version || "1";
+
+// On the app itself there is no player, so stop here — only the marker matters.
+const ON_APP =
+  /localhost|127\.0\.0\.1/.test(location.hostname) &&
+  !location.pathname.includes("extension-test");
+
 let language = "ko";
 let overlay = null;
 let lastText = "";
 let statusEl = null;
 const cache = new Map();
 
-if (platform) init();
+if (platform && !ON_APP) init();
 
 async function init() {
   const stored = await chrome.storage.local.get(["language"]);

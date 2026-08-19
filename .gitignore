@@ -49,3 +49,4 @@ ml/data/dict/
 
 # Runtime logs
 logs/
+.chrome-profile/

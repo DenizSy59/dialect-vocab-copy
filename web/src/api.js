@@ -65,6 +65,22 @@ export const api = {
 
   clipUrl: (wordId) => `/api/words/${wordId}/clip`,
 
+  tokenise: (text, language) =>
+    fetch("/api/tokenise", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, language }),
+    }).then(json),
+
+  // Saving a word that has no video behind it — the companion and the
+  // extension both land here.
+  saveExternal: (payload) =>
+    fetch("/api/words/external", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).then(json),
+
   lookup: (lang, word, surface) =>
     fetch(
       `/api/dictionary?lang=${lang}&word=${encodeURIComponent(word)}` +
