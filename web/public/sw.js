@@ -1,19 +1,29 @@
 /* Service worker.
  *
- * Deliberately conservative about what it caches. The app shell is safe to
- * serve from cache, but nothing else here is:
+ * The first version of this cached the HTML shell cache-first, which was a bug:
+ * Vite gives every build new hashed asset filenames, so a cached index.html
+ * keeps asking for /assets/index-OLDHASH.js long after that file is gone. The
+ * result is a blank white page that a normal reload cannot fix, because the
+ * reload is served from the same stale cache.
  *
- * - API responses change as jobs progress, and a cached "processing" status
- *   that never updates is worse than no offline support at all.
- * - Video and clips are large and range-requested; caching them would fill the
- *   user's storage quota with files they watched once.
+ * So the rule is now split by what the file actually is:
  *
- * So: cache-first for the shell, network-only for everything else. The point is
- * installability and a fast cold start, not offline transcription, which is
- * impossible anyway since the work happens on a server with a GPU.
+ *   - HTML and navigations: NETWORK FIRST. The shell is small, it must never
+ *     be stale, and cache is only a fallback for being offline.
+ *   - /assets/*: cache-first, which is safe precisely because the filenames are
+ *     content-hashed — a given URL's contents can never change.
+ *   - API, media, clips: never touched. A cached "processing" status that never
+ *     updates is worse than no offline support, and caching video would fill
+ *     the user's storage with files they watched once.
+ *
+ * Offline transcription is impossible anyway — the work happens on a server
+ * with a GPU — so the point here is installability and a fast cold start, not
+ * a functioning offline app.
  */
 
-const CACHE = "lexicon-shell-v1";
+// Bumped from v1. The activate handler deletes every cache that is not this
+// one, which is what evicts the broken v1 shell from anyone who already has it.
+const CACHE = "lexicon-v2";
 const SHELL = ["/", "/index.html", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
@@ -34,24 +44,23 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
-  // Never touch the API, media or clips.
   if (
+    event.request.method !== "GET" ||
+    url.origin !== self.location.origin ||
     url.pathname.startsWith("/api/") ||
-    url.pathname.startsWith("/media/") ||
-    event.request.method !== "GET"
+    url.pathname.startsWith("/media/")
   ) {
     return;
   }
 
-  // Built assets are content-hashed, so once cached they are never stale.
-  const isAsset = url.pathname.startsWith("/assets/");
-  const isShell = SHELL.includes(url.pathname) || event.request.mode === "navigate";
-  if (!isAsset && !isShell) return;
+  const isNavigation =
+    event.request.mode === "navigate" || SHELL.includes(url.pathname);
 
-  event.respondWith(
-    caches.match(event.request).then((hit) => {
-      if (hit) return hit;
-      return fetch(event.request)
+  if (isNavigation) {
+    // Network first. Falling back to cache only when the network genuinely
+    // fails means a new build is picked up on the very next load.
+    event.respondWith(
+      fetch(event.request)
         .then((res) => {
           if (res.ok) {
             const copy = res.clone();
@@ -59,7 +68,23 @@ self.addEventListener("fetch", (event) => {
           }
           return res;
         })
-        .catch(() => caches.match("/index.html"));
+        .catch(() => caches.match(event.request).then((hit) => hit || caches.match("/index.html"))),
+    );
+    return;
+  }
+
+  if (!url.pathname.startsWith("/assets/")) return;
+
+  event.respondWith(
+    caches.match(event.request).then((hit) => {
+      if (hit) return hit;
+      return fetch(event.request).then((res) => {
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(event.request, copy));
+        }
+        return res;
+      });
     }),
   );
 });

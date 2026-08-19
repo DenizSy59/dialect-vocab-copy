@@ -17,6 +17,53 @@
   </head>
   <body>
     <div id="root"></div>
+
+    <!--
+      Self-heal a stale service worker cache.
+
+      If a cached shell points at build assets that no longer exist, the module
+      script 404s, React never boots, and the page is blank white — with no
+      running JavaScript left to recover from it. This listener runs before the
+      app and catches that specific failure: an /assets/ resource failing to
+      load means the cache is lying, so wipe it and reload once.
+
+      Guarded by sessionStorage so a genuinely missing file cannot cause a
+      reload loop; the second failure is left alone and shows in the console.
+    -->
+    <script>
+      window.addEventListener(
+        "error",
+        function (e) {
+          var el = e.target;
+          if (!el || !el.tagName) return;
+          var src = el.src || el.href || "";
+          if (src.indexOf("/assets/") === -1) return;
+          if (sessionStorage.getItem("lexicon.recovered")) return;
+          sessionStorage.setItem("lexicon.recovered", "1");
+
+          var done = function () {
+            location.reload();
+          };
+          if ("serviceWorker" in navigator) {
+            navigator.serviceWorker
+              .getRegistrations()
+              .then(function (rs) {
+                return Promise.all(rs.map(function (r) { return r.unregister(); }));
+              })
+              .then(function () {
+                return caches.keys().then(function (ks) {
+                  return Promise.all(ks.map(function (k) { return caches.delete(k); }));
+                });
+              })
+              .then(done, done);
+          } else {
+            done();
+          }
+        },
+        true, // capture: resource errors do not bubble
+      );
+    </script>
+
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
