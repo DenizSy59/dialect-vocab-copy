@@ -211,6 +211,101 @@ class TurkishTokeniser:
         return tokens
 
 
+class EnglishTokeniser:
+    """English, for learners whose target language is English.
+
+    No morphological analyser here. English inflection is shallow enough that
+    suffix stripping plus a frequency check does most of the job: strip a
+    candidate ending, and accept the result only if it is a word the corpus
+    actually knows. That rejects "hi" from "his" while accepting "run" from
+    "running".
+
+    It is a heuristic and it will miss irregulars — "went" stays "went" rather
+    than becoming "go". Fixing that properly needs a lemma dictionary, which is
+    worth doing if English becomes a main target rather than a convenience.
+    """
+
+    # Closed-class words. A learner does not save "the" or "of", and leaving
+    # them clickable buries the words that matter.
+    FUNCTION_WORDS = {
+        "the", "a", "an", "and", "or", "but", "if", "of", "to", "in", "on",
+        "at", "by", "for", "with", "from", "as", "is", "are", "was", "were",
+        "be", "been", "being", "am", "do", "does", "did", "have", "has", "had",
+        "i", "you", "he", "she", "it", "we", "they", "me", "him", "her", "us",
+        "them", "my", "your", "his", "its", "our", "their", "this", "that",
+        "these", "those", "not", "no", "so", "than", "then", "there", "here",
+        "what", "which", "who", "whom", "when", "where", "why", "how", "all",
+        "any", "some", "just", "very", "too", "can", "will", "would", "could",
+        "should", "may", "might", "must", "shall", "up", "out", "about", "into",
+        "over", "after", "before", "s", "t", "re", "ve", "ll", "d", "m",
+    }
+
+    SUFFIXES = [
+        ("ies", "y"), ("ied", "y"), ("ying", "ie"),
+        ("sses", "ss"), ("shes", "sh"), ("ches", "ch"), ("xes", "x"),
+        ("ing", ""), ("ed", ""), ("es", ""), ("s", ""),
+        ("ly", ""), ("er", ""), ("est", ""),
+    ]
+
+    def __init__(self):
+        self._freq = None
+
+    def _frequency(self, word: str) -> float:
+        if self._freq is None:
+            from wordfreq import get_frequency_dict
+            self._freq = get_frequency_dict("en")
+        return self._freq.get(word, 0.0)
+
+    def _lemma(self, word: str) -> str:
+        """Most frequent plausible stem, not the first one that exists.
+
+        Accepting the first known stem was wrong: the frequency list contains
+        junk like "runn" and "stor", so running became runn and stores became
+        stor. Every candidate is generated and the commonest one wins, which
+        picks run over runn and store over stor.
+        """
+        w = word.lower()
+        candidates = {w: self._frequency(w)}
+
+        for suffix, replacement in self.SUFFIXES:
+            if not w.endswith(suffix) or len(w) - len(suffix) < 2:
+                continue
+            stem = w[: -len(suffix)] + replacement
+            candidates[stem] = self._frequency(stem)
+            # running -> runn -> run
+            if len(stem) > 2 and stem[-1] == stem[-2]:
+                candidates[stem[:-1]] = self._frequency(stem[:-1])
+            # stor -> store, hop -> hope
+            candidates[stem + "e"] = self._frequency(stem + "e")
+
+        best = max(candidates, key=lambda c: candidates[c])
+        # If nothing scored, the word is unknown — keep it as it was rather
+        # than inventing a stem.
+        return best if candidates[best] > 0 else w
+
+    def __call__(self, text: str) -> List[Token]:
+        import re
+
+        tokens = []
+        for m in re.finditer(r"[A-Za-z]+(?:'[A-Za-z]+)?|[^\sA-Za-z]", text):
+            surface = m.group()
+            is_word = surface[0].isalpha()
+            lemma = self._lemma(surface) if is_word else surface
+            tokens.append(Token(
+                surface=surface,
+                lemma=lemma,
+                pos="WORD" if is_word else "PUNCT",
+                char_start=m.start(),
+                char_end=m.end(),
+                content=(
+                    is_word
+                    and len(surface) > 1
+                    and lemma not in self.FUNCTION_WORDS
+                ),
+            ))
+        return tokens
+
+
 def get_tokeniser(language: str):
     if language == "ko":
         return KoreanTokeniser()
@@ -218,6 +313,8 @@ def get_tokeniser(language: str):
         return ChineseTokeniser()
     if language == "tr":
         return TurkishTokeniser()
+    if language == "en":
+        return EnglishTokeniser()
     raise ValueError(
-        f"no tokeniser for language {language!r} (expected 'ko', 'zh' or 'tr')"
+        f"no tokeniser for language {language!r} (expected 'ko', 'zh', 'tr' or 'en')"
     )

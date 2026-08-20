@@ -1,5 +1,14 @@
 import { PLATFORMS } from "./SourcePicker.jsx";
 
+/* The same build runs in a browser and inside the desktop shell.
+ *
+ * In the shell, window.lexicon exists and Netflix can actually be opened, so
+ * the DRM platforms become real buttons instead of an explanation of why they
+ * cannot work. In a browser the object is absent and they fall back to the
+ * extension route. One build, two behaviours, decided at runtime.
+ */
+const desktop = typeof window !== "undefined" && window.lexicon?.isDesktop;
+
 /* The landing screen: choose where the video comes from, before anything else.
  *
  * Previously the app opened straight into the upload form with the platform
@@ -51,17 +60,22 @@ export function Home({ onPick, t }) {
       <h2 className="home-section">
         Streaming platforms
         <span className="home-section-note">
-          DRM means these cannot play inside a web page — they run through the
-          browser extension on the platform's own site
+          {desktop
+            ? "Opens in a player window with the word overlay on top. Log in to the platform yourself — Lexicon never sees your account."
+            : "DRM means these cannot play inside a web page — they run through the browser extension on the platform's own site"}
         </span>
       </h2>
       <div className="home-grid small">
         {viaExtension.map((p) => (
-          <button key={p.id} className="home-card" onClick={() => onPick(p.id)}>
+          <button
+            key={p.id}
+            className="home-card"
+            onClick={() => onPick(p.id)}
+          >
             <span className="home-card-top">
               <span className="source-icon">{p.icon}</span>
               <span className="home-card-name sm">{p.name}</span>
-              <span className="pill">extension</span>
+              <span className="pill">{desktop ? "open" : "extension"}</span>
             </span>
           </button>
         ))}

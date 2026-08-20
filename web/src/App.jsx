@@ -8,6 +8,8 @@ import { SourcePicker } from "./components/SourcePicker.jsx";
 import { PlatformPanel } from "./components/PlatformPanel.jsx";
 import { DeckLibrary } from "./components/DeckLibrary.jsx";
 import { Home } from "./components/Home.jsx";
+import { StreamingPlayer } from "./components/StreamingPlayer.jsx";
+import { PLATFORMS } from "./components/SourcePicker.jsx";
 import { makeT, UI_LANGUAGES } from "./i18n.js";
 import { THEMES } from "./themes.js";
 
@@ -177,12 +179,24 @@ export default function App() {
           </div>
         )}
 
-        {view === "home" ? (
+        {view === "stream" ? (
+          <StreamingPlayer
+            platform={PLATFORMS.find((p) => p.id === source)}
+            language={platformLanguage}
+            onLanguage={setPlatformLanguage}
+            onExit={() => setView("home")}
+            t={t}
+          />
+        ) : view === "home" ? (
           <Home
             t={t}
             onPick={(id) => {
               setSource(id);
-              setView("player");
+              // In the desktop shell the DRM platforms open a real player;
+              // in a browser they fall through to the extension instructions.
+              const p = PLATFORMS.find((x) => x.id === id);
+              const streaming = window.lexicon?.isDesktop && p && !p.works;
+              setView(streaming ? "stream" : "player");
             }}
           />
         ) : view === "deck" ? (
