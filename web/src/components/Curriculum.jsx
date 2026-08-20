@@ -158,7 +158,9 @@ function LevelView({ lang, level, onBack, onQuiz }) {
                 {w.inYourVideos && <span className="seen-dot" title="in your videos" />}
               </span>
               {w.pinyin && <span className="word-chip-sense">{w.pinyin}</span>}
-              <span className="word-chip-sense">{w.senses[0] || "—"}</span>
+              <span className="word-chip-sense">
+                {w.senses?.slice(0, 2).join("; ") || "—"}
+              </span>
             </div>
           ))}
         </div>

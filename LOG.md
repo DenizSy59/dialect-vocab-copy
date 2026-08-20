@@ -777,3 +777,104 @@ unverified rather than fact.
 
 Repo, environment, spike and test-set tooling committed. Pipeline runs end to
 end in both languages and writes timestamped lemmatised JSON. No Node, no React.
+
+---
+
+## 2026-08-21 — quality pass
+
+Went looking for what was actually wrong rather than adding features. Six
+things, of which two were teaching the learner incorrect material.
+
+### Words that could not be clicked
+
+Reported as "some words are not clickable", and it was a real gap in the
+part-of-speech filter rather than anything subtle. Pronouns, determiners,
+numerals and classifiers were all excluded, which meant these were unclickable:
+
+| language | words |
+|---|---|
+| Korean | 저 (I), 이것 (this), 그 (that) |
+| Chinese | 我们 (we), 他 (he), 一起 (together), 五个 |
+
+Among the first words anyone learns. The filter now includes NP and MM for
+Korean, and r, m and q for Chinese, on the test of whether a learner would put
+it on a flashcard. Erring wide is the right direction: an extra clickable word
+costs a glance, a missing one leaves the learner unable to save something with
+no way to tell why.
+
+SL stays excluded — Latin tokens like "FC" and "AI" are not Korean vocabulary.
+
+### Dictionary sense ordering, and an approach that did not work
+
+The app takes `senses[0]` in the deck, the quiz, the word panel and the Anki
+export, which makes sense ordering a correctness problem:
+
+    시장  ->  hunger, market, mayor     (it means market)
+    行    ->  row; line, trade, firm    (it means to walk / OK)
+
+Wiktionary orders by etymology, CC-CEDICT by whatever was written first.
+Neither is ordered by what a learner is likely to meet.
+
+**The first attempt was wrong and is worth recording.** It scored glosses on
+length and specialist labels to guess the everyday meaning. The dry run showed
+it never fixed 시장 — nothing in the text distinguishes "hunger" from "market" —
+while it *did* break 会 by promoting "meeting" over "can, to know how to", and
+turned UP主 into "pronounced [a4 pu5 zhu3]". A reranker that makes things worse
+than leaving them alone is not worth running.
+
+Ranking real meanings needs per-sense frequency data, which does not exist
+openly for these languages. So the version that shipped only demotes glosses
+that are provably not meanings at all — pronunciation notes, cross-references,
+form-of entries. That reordered 1,879 of 290,081 entries and changed nothing it
+could not justify.
+
+For the rest, the fix is presentational: the deck, the level list and quiz
+answers now show the **first two** senses rather than one, so a wrong first
+sense is no longer the only thing the learner sees. 시장 still leads with
+"hunger" and that is still wrong; it is now followed immediately by "market".
+
+### A worker that died silently
+
+The transcription worker was stopping seconds after start. Uploads would have
+queued forever with nothing shown — the API stayed up and the UI looked normal.
+
+`nohup` and `disown` were not enough. Adding the signal name to the shutdown
+log gave the answer immediately: **shutting down on SIGTERM**. Both leave the
+process in the launching shell's process group, and when that shell goes the
+whole group is signalled. The worker now calls `os.setsid()` at startup so it
+owns its session and cannot be killed by the terminal that started it.
+
+**The health check for it was also wrong, in the worse direction.** Asking
+BullMQ `getWorkers()` returned zero while the worker was happily processing
+jobs, because the Python client does not register the way the Node one does. A
+confident false negative would have put a "worker is down" banner in front of
+someone whose system was fine. Replaced with a heartbeat the worker writes
+itself, with a TTL, which is unambiguous. The UI now warns only when it is
+genuinely down, and says how many jobs are waiting.
+
+### Tests where the bugs actually were
+
+There were 62 Python tests and **zero** for the API or the frontend — while
+every bug found by hand this project has lived in the API layer: multer
+decoding Korean filenames as latin1, a tokeniser spawning a process per
+request, a subtitle cache keyed without its language, the liveness check above.
+
+Added 22 API tests covering tokenising, script detection, readings, the
+dictionary, translation and its cache, saved-word occurrences, and quiz
+construction. They run against a live API and database on purpose: the bugs
+were in the seams between Node, Python and Mongo, and mocking those away would
+have hidden every one of them.
+
+`./test.sh` runs both suites. 84 tests, all passing.
+
+### Still open after this pass
+
+- **Korean readings fragment on verbs.** 도왔던 renders as 돕 · 었 · 던 with a
+  reading only on the stem, because tokenising is per morpheme. Accurate per
+  token, odd to read. Fixing it means grouping a stem with its endings for
+  display, which is a rendering change rather than a data one.
+- **시장 still leads with "hunger".** Only fixable with sense-frequency data.
+- **Viki and iQIYI selectors are still guesses** and have never run against
+  those sites.
+- **No frontend tests.** The React layer has had its share of bugs too — the
+  ruby overlap, a prop name colliding with a state variable.

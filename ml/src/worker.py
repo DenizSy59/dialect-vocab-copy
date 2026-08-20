@@ -27,6 +27,22 @@ from pymongo import MongoClient
 sys.path.insert(0, str(Path(__file__).parent))
 from pipeline import Pipeline, detect_language, media_duration, pick_device, SUPPORTED
 
+# Detach into a session of our own.
+#
+# The worker kept dying seconds after starting, with "shutting down on SIGTERM"
+# in the log. nohup and disown were not enough: both leave the process in the
+# launching shell's process group, and when that shell goes away the whole group
+# is signalled. A long-running worker should not be killable by the terminal
+# that happened to start it.
+#
+# setsid fails harmlessly if we are already a session leader, which is the case
+# when systemd or launchd starts it.
+try:
+    os.setsid()
+except (OSError, AttributeError):
+    pass
+
+
 # Must match queueName in the Node API config, or jobs go into a queue nobody
 # is watching and simply sit there.
 QUEUE_NAME = "transcription"
@@ -222,17 +238,59 @@ async def main():
 
     stop = asyncio.Future()
 
-    def shutdown():
+    def shutdown(signame):
+        # Name the signal. The worker was dying silently after finishing a job
+        # and "shutting down" alone gave no way to tell whether that was a
+        # deliberate stop, a terminal closing, or something else.
         if not stop.done():
-            print("\nshutting down")
+            print(f"\nshutting down on {signame}", flush=True)
             stop.set_result(True)
 
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGINT, signal.SIGTERM):
-        loop.add_signal_handler(sig, shutdown)
+        loop.add_signal_handler(sig, shutdown, sig.name)
+
+    # SIGHUP is what a closing terminal sends. nohup already ignores it, but
+    # being explicit means a detached worker cannot be taken down by the shell
+    # that happened to launch it.
+    try:
+        signal.signal(signal.SIGHUP, signal.SIG_IGN)
+    except (AttributeError, ValueError):
+        pass  # not on this platform, or not the main thread
+
+    # Heartbeat.
+     #
+     # BullMQ's getWorkers() does not see this process — the Python client does
+     # not register itself the way the Node one does — so asking the queue
+     # whether a worker exists produced a confident false negative, and the UI
+     # showed a "worker is down" banner while jobs were running fine. A wrong
+     # warning is worse than none.
+     #
+     # A key with a TTL is unambiguous: if it is there, something refreshed it
+     # within the last interval.
+
+    import redis.asyncio as aioredis
+
+    hb = aioredis.from_url(REDIS_URL)
+
+    async def heartbeat():
+        while not stop.done():
+            try:
+                await hb.set("lexicon:worker:alive", "1", ex=30)
+            except Exception:
+                pass
+            await asyncio.sleep(10)
+
+    hb_task = asyncio.create_task(heartbeat())
 
     print("waiting for jobs")
     await stop
+    hb_task.cancel()
+    try:
+        await hb.delete("lexicon:worker:alive")
+        await hb.aclose()
+    except Exception:
+        pass
     await worker.close()
 
 

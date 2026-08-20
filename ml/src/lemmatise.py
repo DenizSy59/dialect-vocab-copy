@@ -12,13 +12,41 @@ from dataclasses import dataclass, asdict
 from typing import List, Optional
 
 
-# Parts of speech worth saving as vocabulary. Particles, endings and
-# punctuation are filtered out — a learner does not save 을/를 as a word.
-# SL (foreign script) is deliberately excluded. Latin-script tokens like "FC"
-# and "AI" were being offered as Korean vocabulary, which is noise — a learner
-# already reads them. Loanwords written in hangul are tagged NNG and still count.
-KIWI_CONTENT_TAGS = {"NNG", "NNP", "NNB", "NR", "VV", "VA", "VX", "MAG", "MAJ", "XR"}
-JIEBA_CONTENT_TAGS = {"n", "nr", "ns", "nt", "nz", "v", "vd", "vn", "a", "ad", "an", "d", "i", "l", "s", "t"}
+# What counts as vocabulary.
+#
+# The test is whether a learner would put it on a flashcard. Particles and
+# endings fail it — nobody studies 을/를 or 了 as a word.
+#
+# Pronouns, determiners, numerals and classifiers pass it, and leaving them out
+# was a real bug: 저 ("I"), 이것 ("this"), 그 ("that"), 我们 ("we"), 他 ("he") and
+# 一起 ("together") were all unclickable — among the first words anyone learns.
+#
+# Erring wide is the right direction. An extra clickable word costs a glance; a
+# missing one means the learner cannot save a word they need and has no way to
+# tell why it is not offered.
+#
+# SL (foreign script) stays excluded. Latin-script tokens like "FC" and "AI"
+# were being offered as Korean vocabulary, which is noise — a learner already
+# reads them. Loanwords written in hangul are tagged NNG and still count.
+
+KIWI_CONTENT_TAGS = {
+    "NNG", "NNP", "NNB", "NR",   # nouns and numerals
+    "NP",                        # pronouns — 저, 이것, 우리
+    "MM",                        # determiners — 그, 이, 어떤
+    "VV", "VA", "VX",            # verbs and adjectives
+    "MAG", "MAJ",                # adverbs
+    "XR",                        # roots
+}
+JIEBA_CONTENT_TAGS = {
+    "n", "nr", "ns", "nt", "nz",  # nouns
+    "v", "vd", "vn",              # verbs
+    "a", "ad", "an",              # adjectives
+    "d",                          # adverbs
+    "r",                          # pronouns — 我们, 他, 她, 这
+    "m",                          # numerals, and where jieba files 一起
+    "q",                          # classifiers, which Chinese courses teach
+    "i", "l", "s", "t",           # idioms, phrases, place and time words
+}
 
 # Korean predicate tags. Kiwi gives the bare stem for these, so the dictionary
 # form is stem + 다.
@@ -138,9 +166,9 @@ class TurkishTokeniser:
     character offsets have to line up with the original text for word timings.
     """
 
-    # Zeyrek's coarse tags. Nouns, verbs, adjectives and adverbs are the
-    # flashcard-worthy ones; pronouns, conjunctions and postpositions are not.
-    CONTENT_POS = {"Noun", "Verb", "Adj", "Adv"}
+    # Same test as the other languages: would it go on a flashcard? Pronouns
+    # and numerals would; conjunctions and postpositions would not.
+    CONTENT_POS = {"Noun", "Verb", "Adj", "Adv", "Pron", "Num"}
 
     def __init__(self):
         import logging

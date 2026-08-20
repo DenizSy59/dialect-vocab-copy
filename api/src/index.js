@@ -7,6 +7,7 @@ import { config } from "./config.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 import { connectDb } from "./db.js";
+import { transcriptionQueue } from "./queue.js";
 import videosRouter from "./routes/videos.js";
 import wordsRouter from "./routes/words.js";
 import dictionaryRouter from "./routes/dictionary.js";
@@ -46,8 +47,36 @@ app.use("/api/tokenise", tokeniseRouter);
 app.use("/api/curriculum", curriculumRouter);
 app.use("/api/translate", translateRouter);
 
-app.get("/api/health", (req, res) => {
-  res.json({ ok: true, model: config.defaultModel });
+/* Health, including whether the worker is alive.
+ *
+ * The worker died silently after a job once and nothing showed it: the API
+ * stayed up, the UI looked normal, and uploads would have queued forever. A
+ * status that only reports the process answering the request is not a health
+ * check.
+ *
+ * Liveness is inferred from the queue rather than from a process handle,
+ * because the worker is a separate Python process that may not even be on this
+ * machine. If jobs are waiting and none has been picked up, something is wrong
+ * whatever the cause.
+ */
+app.get("/api/health", async (req, res) => {
+  let worker = { alive: null, waiting: 0, active: 0 };
+  try {
+    const [waiting, active] = await Promise.all([
+      transcriptionQueue.getWaitingCount(),
+      transcriptionQueue.getActiveCount(),
+    ]);
+    // The worker's own heartbeat, not getWorkers(). The Python client does not
+    // register the way the Node one does, so getWorkers() reported zero while
+    // the worker was happily processing jobs.
+    const beat = await transcriptionQueue.client.then((c) =>
+      c.get("lexicon:worker:alive"),
+    );
+    worker = { alive: beat === "1", waiting, active };
+  } catch (e) {
+    worker.error = e.message;
+  }
+  res.json({ ok: true, model: config.defaultModel, worker });
 });
 
 // Serve the built frontend from the same origin. Handy for the demo — one

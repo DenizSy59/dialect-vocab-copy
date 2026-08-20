@@ -214,7 +214,7 @@ export function DeckLibrary({ t, uiLanguage, studying, onExit }) {
                   )}
                 </span>
                 <span className="word-chip-sense">
-                  {w.senses?.length ? w.senses[0] : "—"}
+                  {w.senses?.length ? w.senses.slice(0, 2).join("; ") : "—"}
                 </span>
               </div>
             ))}

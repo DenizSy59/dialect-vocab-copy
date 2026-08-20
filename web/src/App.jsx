@@ -17,6 +17,7 @@ import { THEMES } from "./themes.js";
 
 export default function App() {
   const [online, setOnline] = useState(null);
+  const [worker, setWorker] = useState(null);
   const [videos, setVideos] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [segments, setSegments] = useState([]);
@@ -89,6 +90,22 @@ export default function App() {
   useEffect(() => {
     refreshVideos();
   }, [refreshVideos]);
+
+  /* Watch the transcription worker.
+   *
+   * It can die without the API noticing, and the failure is invisible: uploads
+   * queue and simply never start. Better to say so than to let someone wait.
+   */
+  useEffect(() => {
+    const check = () =>
+      api
+        .health()
+        .then((h) => setWorker(h.worker || null))
+        .catch(() => setWorker(null));
+    check();
+    const id = setInterval(check, 15000);
+    return () => clearInterval(id);
+  }, []);
 
   // Poll only while something is actually working. Transcription takes minutes
   // and there is no websocket yet, so this is how progress arrives — but idling
@@ -247,6 +264,15 @@ export default function App() {
       </header>
 
       <main className="main">
+        {worker && worker.alive === false && (
+          <div className="error-box" style={{ marginBottom: 16 }}>
+            The transcription worker is not running, so uploads will queue but
+            never start.{" "}
+            {worker.waiting > 0 && <strong>{worker.waiting} waiting. </strong>}
+            Start it with <code>./run.sh</code> in the project folder.
+          </div>
+        )}
+
         {error && (
           <div className="error-box" style={{ marginBottom: 16 }}>
             {error}{" "}

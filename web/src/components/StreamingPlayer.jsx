@@ -224,7 +224,7 @@ function renderTokens(text, tokens, saved, save, showReading) {
           }`}
           title={
             clickable
-              ? `${token.lemma}${token.senses?.length ? " — " + token.senses[0] : ""}`
+              ? `${token.lemma}${token.senses?.length ? " — " + token.senses.slice(0, 2).join("; ") : ""}`
               : undefined
           }
           onClick={() => clickable && save(token)}

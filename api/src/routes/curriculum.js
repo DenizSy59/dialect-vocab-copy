@@ -236,8 +236,13 @@ router.get("/quiz", async (req, res) => {
         .lean(),
     ]);
 
+    // Two senses, not one. Sense ordering is unreliable — 시장 leads with
+    // "hunger" when it means "market" — so a single-sense answer can simply be
+    // wrong. Two makes the real meaning very likely to be in the option.
     const senseFor = Object.fromEntries(
-      entries.filter((e) => e.senses?.length).map((e) => [e.word, e.senses[0]]),
+      entries
+        .filter((e) => e.senses?.length)
+        .map((e) => [e.word, e.senses.slice(0, 2).join("; ")]),
     );
 
     // Index example sentences by the curriculum word they contain.
