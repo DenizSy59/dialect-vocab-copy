@@ -10,39 +10,69 @@ import { languageName } from "../i18n.js";
  * and would lose exactly the thing this project is for.
  */
 
-const LANGUAGES = ["zh", "ko", "tr", "en"];
+/* Language picker: the first screen of the course.
+ *
+ * Previously the course opened on Korean with a dropdown in the header, which
+ * buried the other three and made the language read as a setting rather than
+ * the choice it actually is. Same shape as the deck, so the two halves of the
+ * app behave alike.
+ */
+function LanguagePicker({ languages, onPick, uiLanguage }) {
+  return (
+    <div className="panel">
+      <div className="panel-head">
+        <span>◈</span> Course
+        <span className="spacer" />
+        <span className="muted">{languages.length} languages</span>
+      </div>
+      <div className="panel-body">
+        {languages.length === 0 && (
+          <div className="empty">
+            No course built yet. Run <code>python src/curriculum.py</code> in{" "}
+            <code>ml/</code>.
+          </div>
+        )}
+        <div className="lang-grid">
+          {languages.map((l) => {
+            const pct = l.total ? Math.round((l.known / l.total) * 100) : 0;
+            return (
+              <button key={l.lang} className="lang-card" onClick={() => onPick(l.lang)}>
+                <span className="lang-card-name">{languageName(l.lang, uiLanguage)}</span>
+                <span className="lang-card-count">
+                  {l.known} / {l.total} words · {l.levels} levels
+                </span>
+                {/* Says which levels are a published standard and which are our
+                    own banding, because those are different claims. */}
+                <span className="tag">{l.standard}</span>
+                <span className="bar" style={{ width: "100%", marginTop: 8 }}>
+                  <i style={{ width: `${pct}%` }} />
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
 
-function Roadmap({ lang, onLang, levels, onPick, uiLanguage }) {
+function Roadmap({ lang, levels, onPick, onBack, uiLanguage }) {
   const totalKnown = levels.reduce((a, l) => a + l.known, 0);
   const total = levels.reduce((a, l) => a + l.total, 0);
 
   return (
     <div className="panel">
       <div className="panel-head">
-        <span>◈</span> Course
+        <span>◈</span> {languageName(lang, uiLanguage)}
         <span className="spacer" />
         <span className="muted">
           {totalKnown} / {total} words
         </span>
-        <select
-          className="chrome-select"
-          value={lang}
-          onChange={(e) => onLang(e.target.value)}
-        >
-          {LANGUAGES.map((l) => (
-            <option key={l} value={l}>
-              {languageName(l, uiLanguage)}
-            </option>
-          ))}
-        </select>
+        <button className="ghost" onClick={onBack}>
+          Back
+        </button>
       </div>
       <div className="panel-body">
-        {levels.length === 0 && (
-          <div className="empty">
-            No course built yet. Run <code>python src/curriculum.py</code> in{" "}
-            <code>ml/</code>.
-          </div>
-        )}
 
         <div className="road">
           {levels.map((l, i) => {
@@ -280,12 +310,22 @@ function Quiz({ lang, level, onExit }) {
 }
 
 export function Curriculum({ uiLanguage, onExit }) {
-  const [lang, setLang] = useState("ko");
+  // null until a language is chosen, so the picker is the entry point.
+  const [lang, setLang] = useState(null);
+  const [languages, setLanguages] = useState([]);
   const [levels, setLevels] = useState([]);
   const [level, setLevel] = useState(null);
   const [quiz, setQuiz] = useState(false);
 
+  const loadLanguages = useCallback(() => {
+    fetch("/api/curriculum/languages")
+      .then((r) => r.json())
+      .then((d) => setLanguages(d.languages || []))
+      .catch(() => setLanguages([]));
+  }, []);
+
   const load = useCallback(() => {
+    if (!lang) return;
     fetch(`/api/curriculum?lang=${lang}`)
       .then((r) => r.json())
       .then((d) => setLevels(d.levels || []))
@@ -293,8 +333,22 @@ export function Curriculum({ uiLanguage, onExit }) {
   }, [lang]);
 
   useEffect(() => {
+    loadLanguages();
+  }, [loadLanguages]);
+
+  useEffect(() => {
     load();
   }, [load]);
+
+  if (!lang) {
+    return (
+      <LanguagePicker
+        languages={languages}
+        onPick={setLang}
+        uiLanguage={uiLanguage}
+      />
+    );
+  }
 
   if (quiz && level != null) {
     return (
@@ -304,6 +358,7 @@ export function Curriculum({ uiLanguage, onExit }) {
         onExit={() => {
           setQuiz(false);
           load(); // progress may have changed
+          loadLanguages();
         }}
       />
     );
@@ -323,9 +378,12 @@ export function Curriculum({ uiLanguage, onExit }) {
   return (
     <Roadmap
       lang={lang}
-      onLang={setLang}
       levels={levels}
       onPick={setLevel}
+      onBack={() => {
+        setLang(null);
+        loadLanguages(); // progress may have moved while inside
+      }}
       uiLanguage={uiLanguage}
     />
   );

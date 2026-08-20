@@ -45,6 +45,46 @@ const Progress = mongoose.model(
 
 Progress.schema.index({ lang: 1, word: 1 }, { unique: true });
 
+/* Every language that has a course, with its progress.
+ *
+ * The course used to open on Korean with a dropdown to change it, which buried
+ * the other three and made the language feel like a setting rather than the
+ * choice it is. This mirrors the deck: pick the language, then work inside it.
+ */
+router.get("/languages", async (req, res) => {
+  try {
+    const totals = await Curriculum.aggregate([
+      {
+        $group: {
+          _id: "$lang",
+          total: { $sum: 1 },
+          levels: { $addToSet: "$level" },
+          standard: { $first: "$standard" },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    const progress = await Progress.aggregate([
+      { $match: { status: "known" } },
+      { $group: { _id: "$lang", known: { $sum: 1 } } },
+    ]);
+    const knownByLang = Object.fromEntries(progress.map((p) => [p._id, p.known]));
+
+    res.json({
+      languages: totals.map((t) => ({
+        lang: t._id,
+        total: t.total,
+        levels: t.levels.length,
+        known: knownByLang[t._id] || 0,
+        standard: t.standard,
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Levels with counts and how much of each is done.
 router.get("/", async (req, res) => {
   try {
