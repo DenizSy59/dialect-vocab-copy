@@ -55,7 +55,7 @@ function fmt(t) {
  * stay neutral rather than defaulting to green — "not measured" and "easy" must
  * not look the same.
  */
-function difficultyColour(d) {
+export function difficultyColour(d) {
   if (d == null) return undefined;
   const hue = 145 - Math.max(0, Math.min(1, d)) * 145; // 145 green -> 0 red
   return `hsl(${hue} 70% 45%)`;
@@ -72,7 +72,7 @@ const POP_MARGIN = 10;
  * clamping keeps it on screen wherever the word is, and it flips below the word
  * when there is not enough room above.
  */
-function popoverPosition(rect) {
+export function popoverPosition(rect) {
   const left = Math.min(
     Math.max(POP_MARGIN, rect.left + rect.width / 2 - POP_WIDTH / 2),
     window.innerWidth - POP_WIDTH - POP_MARGIN,

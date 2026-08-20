@@ -925,3 +925,33 @@ worker caches loaded modules for the life of the process, so source changes do
 nothing until it restarts — and the tests passed the whole time, because they
 import the module directly. Worth remembering before concluding a fix did not
 work.
+
+### Frontend tests
+
+The React layer had no tests at all, while producing a fair share of the bugs:
+readings overlapping each other above the text, a prop named the same as a
+state variable, a subtitle cache keyed without its language.
+
+25 tests over the pure functions, which is where logic that can be wrong
+actually lives — character arithmetic, parsing, clamping. Rendering is still
+checked in the browser, because a test asserting that a `<ruby>` exists would
+not have caught readings colliding by 46px.
+
+What they lock down:
+
+- **`ownership`** — every character renders exactly once even when tokens
+  overlap on one character, which is the 왔 = 오 + 았 case that printed 오었.
+- **`parseSubtitles`** — SRT and VTT, multi-line cues, and garbage returning
+  an empty list rather than throwing.
+- **`makeT`** — a missing translation falls back to English rather than showing
+  a key, so an untranslated string degrades to readable instead of `studyDeck`.
+- **`difficultyColour`** — unscored stays uncoloured, and out-of-range values
+  clamp rather than wrapping the hue back to green.
+- **`popoverPosition`** — clamps at both edges and flips below near the top.
+- **`youtubeId`** — watch, share, embed, shorts and bare-id forms.
+
+`./test.sh` now runs all three suites: **119 tests** — 72 Python, 22 API, 25
+frontend.
+
+Three assertions needed a window that node does not have. Stubbed the two
+properties the function reads rather than adding jsdom for arithmetic.

@@ -19,4 +19,8 @@ else
   echo "  skipped — API is not running. Start it with ./run.sh"
 fi
 
+echo
+echo "== web (pure logic: token spans, subtitle parsing, i18n, clamping) =="
+( cd "$ROOT/web" && npx vitest run 2>&1 | tail -6 ) || fail=1
+
 exit $fail

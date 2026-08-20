@@ -4,7 +4,7 @@ import { ExtensionSetup } from "./ExtensionSetup.jsx";
 import { Companion } from "./Companion.jsx";
 
 // Accepts the usual forms: watch links, share links, embed links, or a bare id.
-function youtubeId(input) {
+export function youtubeId(input) {
   const s = input.trim();
   if (/^[\w-]{11}$/.test(s)) return s;
   const m = s.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([\w-]{11})/);
