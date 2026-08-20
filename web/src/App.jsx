@@ -9,6 +9,7 @@ import { PlatformPanel } from "./components/PlatformPanel.jsx";
 import { DeckLibrary } from "./components/DeckLibrary.jsx";
 import { Home } from "./components/Home.jsx";
 import { StreamingPlayer } from "./components/StreamingPlayer.jsx";
+import { Curriculum } from "./components/Curriculum.jsx";
 import { PLATFORMS } from "./components/SourcePicker.jsx";
 import { makeT, UI_LANGUAGES } from "./i18n.js";
 import { THEMES } from "./themes.js";
@@ -132,6 +133,13 @@ export default function App() {
         <span className="spacer" />
 
         <button
+          className={`toggle ${view === "course" ? "on" : ""}`}
+          onClick={() => setView(view === "course" ? "home" : "course")}
+        >
+          ◈ Course
+        </button>
+
+        <button
           className={`toggle ${view === "deck" ? "on" : ""}`}
           onClick={() => setView(view === "deck" ? "home" : "deck")}
         >
@@ -179,7 +187,9 @@ export default function App() {
           </div>
         )}
 
-        {view === "stream" ? (
+        {view === "course" ? (
+          <Curriculum uiLanguage={uiLanguage} onExit={() => setView("home")} />
+        ) : view === "stream" ? (
           <StreamingPlayer
             platform={PLATFORMS.find((p) => p.id === source)}
             language={platformLanguage}

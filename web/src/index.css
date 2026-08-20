@@ -1570,3 +1570,169 @@ label.field {
   color: var(--text-faint);
   text-align: center;
 }
+
+/* ---------- Course roadmap ---------- */
+
+/* A vertical path rather than a grid: the levels are ordered and the layout
+ * should say so. Each node shows its own progress, so "how far am I" is
+ * answerable at a glance. */
+.road {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+}
+
+.road-node {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+}
+
+.road-node.locked {
+  opacity: 0.45;
+}
+
+.road-node.done {
+  border-color: var(--emerald);
+}
+
+.road-num {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--cyan), var(--violet));
+  color: #04121a;
+}
+
+.road-node.locked .road-num {
+  background: var(--sunken);
+  color: var(--text-faint);
+  border: 1px solid var(--line);
+}
+
+.road-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.road-title {
+  font-weight: 650;
+  font-size: 15px;
+}
+
+.road-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+/* Marks a word that has actually appeared in something you watched — the link
+ * between the course and the video side of the app. */
+.seen-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--emerald);
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.word-chip.known {
+  border-color: rgba(52, 211, 153, 0.45);
+}
+
+/* ---------- Quiz ---------- */
+
+.quiz {
+  padding: 30px 24px 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.quiz-context {
+  width: 100%;
+  max-width: 620px;
+  padding: 16px 18px;
+  border-radius: var(--radius-sm);
+  background: var(--sunken);
+  border: 1px solid var(--line);
+}
+
+.quiz-sentence {
+  font-family: var(--font-cjk);
+  font-size: 18px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.quiz-source {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-top: 8px;
+}
+
+.quiz-word {
+  font-family: var(--font-cjk);
+  font-size: 40px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.quiz-pinyin {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-faint);
+  margin-top: 4px;
+}
+
+.quiz-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  width: 100%;
+  max-width: 640px;
+}
+
+.quiz-option {
+  padding: 13px 15px;
+  text-align: left;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* Right answer is always revealed, not just the one you picked — being told
+ * only that you were wrong teaches nothing. */
+.quiz-option.right {
+  border-color: var(--emerald);
+  background: rgba(52, 211, 153, 0.16);
+}
+
+.quiz-option.wrong {
+  border-color: var(--rose);
+  background: rgba(251, 113, 133, 0.16);
+}
+
+.quiz-option.dim {
+  opacity: 0.45;
+}
