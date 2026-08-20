@@ -72,6 +72,13 @@ export const api = {
       body: JSON.stringify({ language, lemma, segmentId, sentence }),
     }).then(json),
 
+  translate: (texts, target, source) =>
+    fetch("/api/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ texts, target, source }),
+    }).then(json),
+
   tokenise: (text, language) =>
     fetch("/api/tokenise", {
       method: "POST",

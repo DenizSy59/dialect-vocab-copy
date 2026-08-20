@@ -143,7 +143,7 @@ function Tok({ run, token, language, saved, onSave, showReading }) {
 }
 
 function SubtitleLine({
-  segment, language, active, savedLemmas, onSeek, onSaveWord, showEnglish,
+  segment, language, active, savedLemmas, onSeek, onSaveWord, translation,
   showReading,
 }) {
   const runs = useMemo(
@@ -173,22 +173,60 @@ function SubtitleLine({
           );
         })}
       </span>
-      {showEnglish && segment.english && (
-        <span className="sub-en">{segment.english}</span>
-      )}
+      {translation && <span className="sub-en">{translation}</span>}
       </span>
     </div>
   );
 }
 
-export function Player({ video, segments, savedLemmas, onSaveWord, showReading }) {
+const SUB_LANGUAGES = [
+  { code: "off", label: "off" },
+  { code: "en", label: "English" },
+  { code: "tr", label: "Türkçe" },
+  { code: "zh", label: "中文" },
+  { code: "ko", label: "한국어" },
+];
+
+export function Player({
+  video, segments, savedLemmas, onSaveWord, showReading, onWordClick,
+}) {
   const videoRef = useRef(null);
   const listRef = useRef(null);
   const [time, setTime] = useState(0);
   // On by default. A learner who does not want the crutch can turn it off, but
   // hiding it by default would mean most people never find it.
-  const [showEnglish, setShowEnglish] = useState(true);
-  const hasEnglish = segments.some((s) => s.english);
+  // Which language the second subtitle track is in. Chosen here rather than at
+  // upload, because how much help you want depends on how hard the video turns
+  // out to be — a decision you cannot make before watching it.
+  const [subLang, setSubLang] = useState("en");
+  const [translations, setTranslations] = useState({});
+  const [translating, setTranslating] = useState(false);
+
+  /* Fetch the second track for whichever language is selected.
+   *
+   * Whole transcript in one request: the API caches by sentence, so the second
+   * time a language is chosen it returns immediately, and translating line by
+   * line as the video plays would stutter.
+   */
+  useEffect(() => {
+    if (subLang === "off" || !segments.length) return;
+    const texts = segments.map((s) => s.text);
+    let cancelled = false;
+    setTranslating(true);
+    api
+      .translate(texts, subLang, video.language)
+      .then((r) => {
+        if (cancelled) return;
+        const map = {};
+        segments.forEach((s, i) => (map[s._id] = r.texts[i] || ""));
+        setTranslations(map);
+      })
+      .catch(() => {})
+      .finally(() => !cancelled && setTranslating(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [subLang, segments, video.language]);
 
   // timeupdate fires about four times a second, which is visibly late for
   // highlighting a word. rAF while playing keeps the subtitle in step.
@@ -264,15 +302,17 @@ export function Player({ video, segments, savedLemmas, onSaveWord, showReading }
       <div className="panel-head" style={{ borderTop: "1px solid var(--line)" }}>
         <span>◇</span> Transcript
         <span className="spacer" />
-        {hasEnglish && (
-          <button
-            className={`toggle ${showEnglish ? "on" : ""}`}
-            onClick={() => setShowEnglish((v) => !v)}
-            title="Second subtitle track"
-          >
-            EN
-          </button>
-        )}
+        <label className="inline-field">
+          subtitles
+          <select value={subLang} onChange={(e) => setSubLang(e.target.value)}>
+            {SUB_LANGUAGES.filter((l) => l.code !== video.language).map((l) => (
+              <option key={l.code} value={l.code}>
+                {l.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        {translating && <span className="muted">translating…</span>}
         {segments.some((s) => s.difficulty != null) && (
           <span className="legend">
             easy <span className="legend-ramp" /> hard
@@ -293,7 +333,7 @@ export function Player({ video, segments, savedLemmas, onSaveWord, showReading }
             savedLemmas={savedLemmas}
             onSeek={seek}
             onSaveWord={onSaveWord}
-            showEnglish={showEnglish}
+            translation={translations[s._id]}
             showReading={showReading}
           />
         ))}

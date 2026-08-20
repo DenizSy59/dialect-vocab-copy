@@ -10,6 +10,7 @@ import { DeckLibrary } from "./components/DeckLibrary.jsx";
 import { Home } from "./components/Home.jsx";
 import { StreamingPlayer } from "./components/StreamingPlayer.jsx";
 import { Curriculum } from "./components/Curriculum.jsx";
+import { WordPanel } from "./components/WordPanel.jsx";
 import { PLATFORMS } from "./components/SourcePicker.jsx";
 import { makeT, UI_LANGUAGES } from "./i18n.js";
 import { THEMES } from "./themes.js";
@@ -36,6 +37,8 @@ export default function App() {
     () => localStorage.getItem("lexicon.ui") || "en",
   );
   const [view, setView] = useState("home"); // home | player | deck
+  // The word the user is currently looking at, not necessarily one they keep.
+  const [selection, setSelection] = useState(null);
   // Romanisation is a scaffold, so it is off by default and remembered. Leaving
   // it permanently on is a known way to never learn the script.
   // One language at a time when you want it. Somebody studying Korean should
@@ -130,14 +133,29 @@ export default function App() {
    * video keeps its clip. A misclick should be undoable without losing
    * everything collected elsewhere.
    */
-  async function saveWord(segment, tokenIndex) {
+  /* Clicking shows the word; saving is a separate, deliberate act.
+   *
+   * It used to save on click, with the meaning only visible on hover — which is
+   * backwards, since you need to know what a word means before deciding whether
+   * it is worth keeping.
+   */
+  function selectWord(segment, tokenIndex) {
     const token = segment.tokens[tokenIndex];
+    if (token) setSelection({ token, segment, tokenIndex });
+  }
+
+  async function saveSelected(token, segment) {
     try {
-      if (token && savedLemmas.has(token.lemma)) {
-        await api.unsaveWord(selected?.language, token.lemma, segment._id);
-      } else {
-        await api.saveWord(selectedId, segment._id, tokenIndex);
-      }
+      await api.saveWord(selectedId, segment._id, selection.tokenIndex);
+      await refreshWords();
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
+  async function removeSelected(token, segment) {
+    try {
+      await api.unsaveWord(selected?.language, token.lemma, segment._id);
       await refreshWords();
     } catch (e) {
       setError(e.message);
@@ -286,7 +304,7 @@ export default function App() {
                 video={selected}
                 segments={segments}
                 savedLemmas={savedLemmas}
-                onSaveWord={saveWord}
+                onSaveWord={selectWord}
                 showReading={showReading}
               />
             ) : (
@@ -382,6 +400,19 @@ export default function App() {
           </div>
 
           <div>
+            {/* Above the source picker: when a word has just been clicked it is
+                the most immediately relevant thing on screen, and burying it
+                under the upload form meant scrolling to read a definition. */}
+            {selection && source === "upload" && (
+              <WordPanel
+                selection={selection}
+                language={selected?.language}
+                savedLemmas={savedLemmas}
+                onSave={saveSelected}
+                onRemove={removeSelected}
+                t={t}
+              />
+            )}
             <SourcePicker value={source} onChange={setSource} />
             {source === "upload" && (
               <UploadPanel

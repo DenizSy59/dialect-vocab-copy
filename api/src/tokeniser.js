@@ -60,7 +60,7 @@ function start() {
       pending.delete(msg.id);
       clearTimeout(entry.timer);
       if (msg.error) entry.reject(new Error(msg.error));
-      else entry.resolve(msg.tokens || []);
+      else entry.resolve(msg.texts ?? msg.tokens ?? []);
     }
   });
 
@@ -81,19 +81,38 @@ function start() {
   });
 }
 
-export function tokenise(text, language) {
+function request(payload, timeoutMs = TIMEOUT_MS) {
   if (!proc) start();
 
   return new Promise((resolve, reject) => {
     const id = nextId++;
     const timer = setTimeout(() => {
       pending.delete(id);
-      reject(new Error(`tokeniser timed out after ${TIMEOUT_MS}ms`));
-    }, TIMEOUT_MS);
+      reject(new Error(`tokeniser timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
 
     pending.set(id, { resolve, reject, timer });
-    proc.stdin.write(JSON.stringify({ id, text, language }) + "\n");
+    proc.stdin.write(JSON.stringify({ id, ...payload }) + "\n");
   });
+}
+
+export function tokenise(text, language) {
+  return request({ text, language });
+}
+
+/* Translate on demand.
+ *
+ * Translation used to happen once at upload, into whichever language was chosen
+ * then. That made the second subtitle track a decision you had to get right
+ * before you had seen the video, and impossible to change afterwards. Doing it
+ * on demand means the track follows whatever language you want to read right
+ * now.
+ *
+ * The first call for a language pair loads a model and takes a few seconds,
+ * which is why the timeout here is longer than for tokenising.
+ */
+export function translate(texts, source, target) {
+  return request({ op: "translate", texts, source, target }, 120000);
 }
 
 // Start eagerly so the first subtitle does not pay for the import.

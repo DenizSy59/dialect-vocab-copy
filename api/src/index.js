@@ -12,6 +12,7 @@ import wordsRouter from "./routes/words.js";
 import dictionaryRouter from "./routes/dictionary.js";
 import tokeniseRouter from "./routes/tokenise.js";
 import curriculumRouter from "./routes/curriculum.js";
+import translateRouter from "./routes/translate.js";
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use("/api/words", wordsRouter);
 app.use("/api/dictionary", dictionaryRouter);
 app.use("/api/tokenise", tokeniseRouter);
 app.use("/api/curriculum", curriculumRouter);
+app.use("/api/translate", translateRouter);
 
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, model: config.defaultModel });

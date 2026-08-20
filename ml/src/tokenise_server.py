@@ -29,12 +29,25 @@ from lemmatise import get_tokeniser
 from romanise import add_readings
 
 _tokenisers = {}
+# Translators are keyed by (source, target). Each Marian model is about 300 MB
+# and a pivot route holds two, so they are built on demand rather than upfront —
+# but once built they stay, because loading one per sentence would be as slow as
+# the per-request tokeniser this file exists to replace.
+_translators = {}
 
 
 def tokeniser_for(language: str):
     if language not in _tokenisers:
         _tokenisers[language] = get_tokeniser(language)
     return _tokenisers[language]
+
+
+def translator_for(source: str, target: str):
+    key = (source, target)
+    if key not in _translators:
+        from translate import build_translator
+        _translators[key] = build_translator(source, target)
+    return _translators[key]
 
 
 def main():
@@ -68,6 +81,20 @@ def main():
 
         rid = req.get("id")
         try:
+            # Two operations share the process because both need heavy models
+            # resident and neither is worth its own service.
+            if req.get("op") == "translate":
+                source = req["source"]
+                target = req["target"]
+                if source == target:
+                    print(json.dumps({"id": rid, "texts": req["texts"]},
+                                     ensure_ascii=False), flush=True)
+                    continue
+                tr = translator_for(source, target)
+                out = tr(req["texts"]) if tr else req["texts"]
+                print(json.dumps({"id": rid, "texts": out}, ensure_ascii=False), flush=True)
+                continue
+
             tk = tokeniser_for(req["language"])
             tokens = [t.to_dict() for t in tk(req["text"])]
             add_readings(tokens, req["language"])
