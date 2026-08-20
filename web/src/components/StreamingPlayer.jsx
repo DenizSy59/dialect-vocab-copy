@@ -18,6 +18,8 @@ export function StreamingPlayer({ platform, language, onLanguage, onExit, t, sho
   const [line, setLine] = useState("");
   const [tokens, setTokens] = useState([]);
   const [saved, setSaved] = useState(new Set());
+  // What the server decided the subtitle language actually is.
+  const [detected, setDetected] = useState("");
   const [history, setHistory] = useState([]);
   const cache = useRef(new Map());
 
@@ -74,6 +76,7 @@ export function StreamingPlayer({ platform, language, onLanguage, onExit, t, sho
         });
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
+        if (data.language) setDetected(data.language);
         cache.current.set(key, data.tokens || []);
         return data.tokens || [];
       } catch {
@@ -99,16 +102,38 @@ export function StreamingPlayer({ platform, language, onLanguage, onExit, t, sho
     });
   }, [tokenise]);
 
+  /* Clicking a saved word again takes it back out.
+   *
+   * Only this encounter is removed, not the word — the same word saved from
+   * another scene keeps its own clip. A misclick should be undoable without
+   * losing everything collected elsewhere.
+   */
   async function save(token) {
+    const lang = detected || language;
+    const already = saved.has(token.lemma);
     try {
+      if (already) {
+        await fetch("/api/words/unsave", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ language: lang, lemma: token.lemma, sentence: line }),
+        });
+        setSaved((s) => {
+          const n = new Set(s);
+          n.delete(token.lemma);
+          return n;
+        });
+        return;
+      }
       await fetch("/api/words/external", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          language,
+          language: lang,
           lemma: token.lemma,
           surface: token.surface,
           pos: token.pos,
+          reading: token.reading || "",
           sentence: line,
           source: platform.id,
         }),
@@ -128,15 +153,13 @@ export function StreamingPlayer({ platform, language, onLanguage, onExit, t, sho
         <span className="source-icon">{platform.icon}</span>
         <strong>{platform.name}</strong>
         <span className="spacer" />
-        <label className="inline-field">
-          {t("language")}
-          <select value={language} onChange={(e) => onLanguage(e.target.value)}>
-            <option value="ko">한국어</option>
-            <option value="zh">中文</option>
-            <option value="tr">Türkçe</option>
-            <option value="en">English</option>
-          </select>
-        </label>
+        {/* Detected from the subtitle script rather than chosen. The player's
+            subtitle language changes without telling us, so a picker was a
+            question the user had to keep answering — and answering wrongly
+            meant nothing was clickable. */}
+        <span className="tag">
+          {detected ? `detected: ${detected}` : "waiting for subtitles"}
+        </span>
       </div>
 
       {/* The native view is positioned over this. It must stay empty. */}

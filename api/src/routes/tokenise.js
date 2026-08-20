@@ -18,12 +18,50 @@ const ML = path.join(here, "..", "..", "..", "ml");
  * Shells out to the Python tokeniser rather than reimplementing kiwi and jieba
  * in JavaScript, which would guarantee the two routes disagreed eventually.
  */
+/* Work out the language from the script.
+ *
+ * On streaming platforms the subtitle language is whatever the viewer switched
+ * the player to, and it changes without telling us. Trusting the picker meant
+ * Chinese subtitles were fed to the Korean tokeniser, which returned no content
+ * words at all — so nothing was clickable and it looked like Chinese was
+ * unsupported.
+ *
+ * Hangul, Han and Latin are far enough apart that counting characters is
+ * reliable and costs nothing. Turkish is told from English by its own letters;
+ * when neither appears the caller's choice decides, since both use plain Latin.
+ */
+export function detectScript(text, fallback = "en") {
+  let hangul = 0;
+  let han = 0;
+  let latin = 0;
+  let turkish = 0;
+
+  for (const ch of text) {
+    const c = ch.codePointAt(0);
+    if (c >= 0xac00 && c <= 0xd7a3) hangul++;
+    else if ((c >= 0x4e00 && c <= 0x9fff) || (c >= 0x3400 && c <= 0x4dbf)) han++;
+    else if (/[a-z]/i.test(ch)) latin++;
+    if ("çğıöşüÇĞİÖŞÜ".includes(ch)) turkish++;
+  }
+
+  if (hangul > 0 && hangul >= han) return "ko";
+  if (han > 0) return "zh";
+  if (turkish > 0) return "tr";
+  if (latin > 0) return ["tr", "en"].includes(fallback) ? fallback : "en";
+  return fallback;
+}
+
 router.post("/", async (req, res) => {
   try {
-    const { text, language } = req.body;
-    if (!text || !language) {
-      return res.status(400).json({ error: "text and language are required" });
+    const { text } = req.body;
+    let { language } = req.body;
+    if (!text) {
+      return res.status(400).json({ error: "text is required" });
     }
+
+    // The script is the authority, not the picker.
+    language = detectScript(text, language || "en");
+
     if (!["ko", "zh", "tr", "en"].includes(language)) {
       return res.status(400).json({ error: "unsupported language" });
     }
@@ -49,6 +87,7 @@ router.post("/", async (req, res) => {
       }),
     );
 
+    // language is what was detected, which may differ from what was asked
     res.json({ language, text, tokens });
   } catch (err) {
     console.error("tokenise failed:", err);

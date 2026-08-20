@@ -1766,3 +1766,31 @@ rt {
   color: var(--emerald);
   opacity: 0.75;
 }
+
+/* Number of separate encounters behind one card. */
+.occ-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 99px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  background: rgba(34, 211, 238, 0.18);
+  color: var(--cyan);
+  border: 1px solid rgba(34, 211, 238, 0.4);
+  vertical-align: middle;
+}
+
+/* Each encounter on a study card gets its own block, so two clips of the same
+ * word do not read as one run-on example. */
+.card-occurrence {
+  width: 100%;
+  max-width: 560px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  margin-top: 10px;
+}
+
+.card-occurrence:first-of-type {
+  border-top: none;
+}

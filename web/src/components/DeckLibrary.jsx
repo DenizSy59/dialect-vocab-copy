@@ -81,17 +81,31 @@ function StudySession({ words, t, uiLanguage, onExit }) {
                 ? current.senses.join("; ")
                 : t("noDictionary")}
             </div>
-            {current.sentence && (
-              <div className="card-sentence">
-                {current.sentence}
-                {current.sentenceEnglish && (
-                  <div className="card-sentence-en">{current.sentenceEnglish}</div>
+            {/* Every place the word was met, each with its own clip. Seeing
+                the same word in two scenes is what makes it stick, and it is
+                the reason a card keeps occurrences rather than just the
+                first sentence. */}
+            {(current.occurrences || []).map((o, idx) => (
+              <div key={idx} className="card-occurrence">
+                <div className="card-sentence">
+                  {o.sentence}
+                  {o.sentenceTranslation && (
+                    <div className="card-sentence-en">{o.sentenceTranslation}</div>
+                  )}
+                </div>
+                {o.videoId ? (
+                  <video
+                    className="card-clip"
+                    src={api.clipUrl(current._id, idx)}
+                    controls
+                  />
+                ) : (
+                  <div className="muted" style={{ fontSize: 12 }}>
+                    saved from {o.source} — no clip, the video is encrypted
+                  </div>
                 )}
               </div>
-            )}
-            {/* The clip is the reason for saving from video rather than a word
-                list, so it belongs on the answer side of the card. */}
-            <video className="card-clip" src={api.clipUrl(current._id)} controls />
+            ))}
 
             <div className="card-actions">
               <button onClick={() => grade("again")}>{t("again")}</button>
@@ -114,11 +128,18 @@ function StudySession({ words, t, uiLanguage, onExit }) {
   );
 }
 
-export function DeckLibrary({ t, uiLanguage, onExit }) {
+export function DeckLibrary({ t, uiLanguage, studying, onExit }) {
   const [words, setWords] = useState([]);
-  const [language, setLanguage] = useState(null);
-  const [studying, setStudying] = useState(false);
+  const [language, setLanguage] = useState(studying !== "all" ? studying : null);
+  // Renamed from "studying": that now means the language filter from the
+  // top bar, and two different things called studying in one component is a
+  // guaranteed mistake.
+  const [inSession, setInSession] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLanguage(studying !== "all" ? studying : null);
+  }, [studying]);
 
   useEffect(() => {
     api
@@ -143,13 +164,13 @@ export function DeckLibrary({ t, uiLanguage, onExit }) {
 
   const selected = language ? groups.find(([c]) => c === language) : null;
 
-  if (studying && selected) {
+  if (inSession && selected) {
     return (
       <StudySession
         words={selected[1]}
         t={t}
         uiLanguage={uiLanguage}
-        onExit={() => setStudying(false)}
+        onExit={() => setInSession(false)}
       />
     );
   }
@@ -163,13 +184,16 @@ export function DeckLibrary({ t, uiLanguage, onExit }) {
           <span className="muted">
             {selected[1].length} {t("wordsCount")}
           </span>
-          <button className="ghost" onClick={() => setLanguage(null)}>
+          <button
+            className="ghost"
+            onClick={() => (studying !== "all" ? onExit() : setLanguage(null))}
+          >
             {t("backToLibrary")}
           </button>
         </div>
         <div className="panel-body">
           <div className="study-row">
-            <button className="primary" onClick={() => setStudying(true)}>
+            <button className="primary" onClick={() => setInSession(true)}>
               {t("startStudy")}
             </button>
             <a href={api.exportUrl(null, selected[0])} download>
@@ -180,7 +204,15 @@ export function DeckLibrary({ t, uiLanguage, onExit }) {
           <div className="word-grid">
             {selected[1].map((w) => (
               <div key={w._id} className="word-chip">
-                <span className="word-chip-lemma">{w.lemma}</span>
+                <span className="word-chip-lemma">
+                  {w.lemma}
+                  {/* More than one encounter is worth showing: it is the
+                      strongest signal that a word is actually common in what
+                      you watch. */}
+                  {w.occurrences?.length > 1 && (
+                    <span className="occ-badge">{w.occurrences.length}</span>
+                  )}
+                </span>
                 <span className="word-chip-sense">
                   {w.senses?.length ? w.senses[0] : "—"}
                 </span>

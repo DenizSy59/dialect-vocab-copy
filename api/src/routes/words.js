@@ -9,14 +9,41 @@ import { config } from "../config.js";
 
 const router = express.Router();
 
-/* Look a word up, trying the lemma before the surface form.
+/* Look a word up, trying progressively looser forms.
  *
- * The lemma is what a dictionary is keyed on, which is the whole reason the
- * pipeline lemmatises. But lemmatising can go wrong — a merged proper noun or a
- * mis-stemmed verb — so the surface form is worth a second try before giving up.
+ * The lemma is what a dictionary is keyed on, which is why the pipeline
+ * lemmatises at all. But plenty of real words still missed: Korean verbs are
+ * stored with the 다 ending in some sources and without it in others, Chinese
+ * words appear in traditional form, and lemmatising can simply go wrong. Each
+ * of those was showing as "no dictionary entry" for a word that was in the
+ * dictionary under a slightly different key.
  */
 export async function lookup(language, lemma, surface) {
-  const candidates = [lemma, surface].filter(Boolean);
+  const tried = new Set();
+  const candidates = [];
+
+  const push = (w) => {
+    if (w && !tried.has(w)) {
+      tried.add(w);
+      candidates.push(w);
+    }
+  };
+
+  push(lemma);
+  push(surface);
+
+  if (language === "ko") {
+    // 먹다 <-> 먹: sources disagree on whether the citation form keeps 다.
+    if (lemma?.endsWith("다")) push(lemma.slice(0, -1));
+    else push(`${lemma}다`);
+    if (surface?.endsWith("다")) push(surface.slice(0, -1));
+  }
+
+  if (language === "en") {
+    push(lemma?.toLowerCase());
+    push(surface?.toLowerCase());
+  }
+
   for (const word of candidates) {
     const entry = await DictionaryEntry.findOne({ lang: language, word });
     if (entry) return entry;
@@ -24,10 +51,44 @@ export async function lookup(language, lemma, surface) {
   return null;
 }
 
-// Save a clicked word. The client sends the segment and which token inside it
-// was clicked; the sentence and timings are looked up here rather than trusted
-// from the client, so a saved card always matches what is actually in the
-// transcript.
+/* Add one place a word was met.
+ *
+ * Same word met again in another scene appends an occurrence rather than
+ * creating a second card — one card, several clips. Re-clicking the exact same
+ * spot is ignored, since that is a double click rather than a new encounter.
+ */
+async function addOccurrence(language, token, occurrence) {
+  const entry = await lookup(language, token.lemma, token.surface);
+
+  const existing = await SavedWord.findOne({ language, lemma: token.lemma });
+  if (existing) {
+    const duplicate = existing.occurrences.some(
+      (o) =>
+        String(o.segmentId || "") === String(occurrence.segmentId || "") &&
+        o.sentence === occurrence.sentence,
+    );
+    if (!duplicate) {
+      existing.occurrences.push(occurrence);
+      await existing.save();
+    }
+    return existing;
+  }
+
+  return SavedWord.create({
+    language,
+    lemma: token.lemma,
+    surface: token.surface,
+    pos: token.pos,
+    reading: token.reading || "",
+    senses: entry?.senses ?? [],
+    pinyin: entry?.pinyin ?? "",
+    occurrences: [occurrence],
+  });
+}
+
+// Save a clicked word from a transcript. The sentence and timings are looked
+// up here rather than trusted from the client, so a card always matches what is
+// actually in the transcript.
 router.post("/", async (req, res) => {
   try {
     const { videoId, segmentId, tokenIndex } = req.body;
@@ -37,8 +98,11 @@ router.post("/", async (req, res) => {
     const token = segment.tokens[tokenIndex];
     if (!token) return res.status(400).json({ error: "bad tokenIndex" });
 
-    // Confidence comes from the aligned word overlapping this token. Worth
-    // keeping: low scores correlated with mis-transcriptions in Korean.
+    const video = await Video.findById(videoId);
+    const language = video?.language || "";
+
+    // Confidence comes from the aligned word overlapping this token. Low scores
+    // correlated with mis-transcriptions in Korean, so it is worth keeping.
     const overlapping = segment.words.filter(
       (w) =>
         w.start != null &&
@@ -50,32 +114,19 @@ router.post("/", async (req, res) => {
       ? overlapping.reduce((a, w) => a + (w.score ?? 0), 0) / overlapping.length
       : null;
 
-    const video = await Video.findById(videoId);
-    const entry = await lookup(video?.language, token.lemma, token.surface);
-
-    const saved = await SavedWord.findOneAndUpdate(
-      { videoId, source: "upload", lemma: token.lemma },
-      {
-        videoId,
-        segmentId,
-        lemma: token.lemma,
-        surface: token.surface,
-        pos: token.pos,
-        // Stored on the word rather than only on the video, so the deck can be
-        // grouped by language without joining every row back to its source.
-        language: video?.language || "",
-        senses: entry?.senses ?? [],
-        pinyin: entry?.pinyin ?? "",
-        sentence: segment.text,
-        sentenceEnglish: segment.english || "",
-        start: token.start,
-        end: token.end,
-        sentenceStart: segment.start,
-        sentenceEnd: segment.end,
-        confidence,
-      },
-      { upsert: true, new: true, setDefaultsOnInsert: true },
-    );
+    const saved = await addOccurrence(language, token, {
+      videoId,
+      segmentId,
+      surface: token.surface,
+      sentence: segment.text,
+      sentenceTranslation: segment.translation || segment.english || "",
+      start: token.start,
+      end: token.end,
+      sentenceStart: segment.start,
+      sentenceEnd: segment.end,
+      source: "upload",
+      confidence,
+    });
 
     res.status(201).json(saved);
   } catch (err) {
@@ -84,33 +135,28 @@ router.post("/", async (req, res) => {
   }
 });
 
-// Saved from the browser extension. There is no video and no timings — DRM
-// leaves only the subtitle text — so this stores what it can and is honest
-// about the rest by leaving the clip fields empty.
+/* Saved from a streaming platform. No video and no timings — DRM leaves only
+ * the subtitle text — so this stores what it can and leaves the clip fields
+ * empty rather than pretending.
+ */
 router.post("/external", async (req, res) => {
   try {
-    const { language, lemma, surface, pos, sentence, source, sourceUrl } = req.body;
+    const { language, lemma, surface, pos, reading, sentence, source, sourceUrl } = req.body;
     if (!language || !lemma) {
       return res.status(400).json({ error: "language and lemma are required" });
     }
-    const entry = await lookup(language, lemma, surface);
-    const saved = await SavedWord.findOneAndUpdate(
-      { videoId: null, source: source || "extension", lemma },
+
+    const saved = await addOccurrence(
+      language,
+      { lemma, surface: surface || lemma, pos: pos || "", reading: reading || "" },
       {
-        videoId: null,
-        segmentId: null,
-        language,
-        lemma,
         surface: surface || lemma,
-        pos: pos || "",
         sentence: sentence || "",
         source: source || "extension",
         sourceUrl: sourceUrl || "",
-        senses: entry?.senses ?? [],
-        pinyin: entry?.pinyin ?? "",
       },
-      { upsert: true, new: true, setDefaultsOnInsert: true },
     );
+
     res.status(201).json(saved);
   } catch (err) {
     console.error("external save failed:", err);
@@ -118,24 +164,40 @@ router.post("/external", async (req, res) => {
   }
 });
 
+/* Remove one encounter, or the whole card when it was the last one.
+ *
+ * Clicking a saved word again should undo the click, not delete every clip of
+ * that word collected from elsewhere.
+ */
+router.post("/unsave", async (req, res) => {
+  try {
+    const { language, lemma, segmentId, sentence } = req.body;
+    const word = await SavedWord.findOne({ language, lemma });
+    if (!word) return res.json({ removed: false, remaining: 0 });
+
+    const before = word.occurrences.length;
+    word.occurrences = word.occurrences.filter((o) => {
+      if (segmentId) return String(o.segmentId || "") !== String(segmentId);
+      if (sentence) return o.sentence !== sentence;
+      return false;
+    });
+
+    if (word.occurrences.length === 0) {
+      await word.deleteOne();
+      return res.json({ removed: true, remaining: 0, deleted: true });
+    }
+    await word.save();
+    res.json({ removed: word.occurrences.length < before, remaining: word.occurrences.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get("/", async (req, res) => {
   const filter = {};
-  if (req.query.videoId) filter.videoId = req.query.videoId;
   if (req.query.language) filter.language = req.query.language;
-
-  const words = await SavedWord.find(filter).sort({ createdAt: -1 }).lean();
-
-  // Words saved before `language` existed have it blank. Resolving it through
-  // the video keeps the deck grouping correct without a migration.
-  const missing = [...new Set(words.filter((w) => !w.language && w.videoId)
-    .map((w) => String(w.videoId)))];
-  if (missing.length) {
-    const videos = await Video.find({ _id: { $in: missing } }, "language").lean();
-    const byId = Object.fromEntries(videos.map((v) => [String(v._id), v.language]));
-    for (const w of words) {
-      if (!w.language && w.videoId) w.videoLanguage = byId[String(w.videoId)] || "";
-    }
-  }
+  if (req.query.videoId) filter["occurrences.videoId"] = req.query.videoId;
+  const words = await SavedWord.find(filter).sort({ updatedAt: -1 }).lean();
   res.json(words);
 });
 
@@ -144,25 +206,37 @@ router.delete("/:id", async (req, res) => {
   res.json({ ok: true });
 });
 
-// The clip for a saved word. Cut on first request and reused after that, so the
-// first play of a word costs a second or two and every later one is instant.
+/* The clip for one occurrence of a word.
+ *
+ * Cut on first request and reused after that, so the first play costs a second
+ * or two and every later one is instant. The index selects which encounter —
+ * the same word in a different scene is a different clip.
+ */
 router.get("/:id/clip", async (req, res) => {
   try {
+    const index = Number(req.query.i || 0);
     const word = await SavedWord.findById(req.params.id);
     if (!word) return res.status(404).json({ error: "word not found" });
 
-    const video = await Video.findById(word.videoId);
+    const occ = word.occurrences[index];
+    if (!occ) return res.status(404).json({ error: "no such occurrence" });
+    if (!occ.videoId) {
+      // Streaming route: DRM means there is no readable video to cut from.
+      return res.status(409).json({ error: "no clip — saved from a streaming platform" });
+    }
+
+    const video = await Video.findById(occ.videoId);
     if (!video) return res.status(404).json({ error: "source video is gone" });
 
     const clipPath = await cutClip({
       sourcePath: path.join(config.uploadDir, video.filename),
-      start: word.sentenceStart,
-      end: word.sentenceEnd,
-      outName: `${word._id}.mp4`,
+      start: occ.sentenceStart,
+      end: occ.sentenceEnd,
+      outName: `${word._id}-${index}.mp4`,
     });
 
-    if (!word.clipPath) {
-      word.clipPath = path.basename(clipPath);
+    if (!occ.clipPath) {
+      occ.clipPath = path.basename(clipPath);
       await word.save();
     }
 
@@ -183,25 +257,24 @@ function ankiField(text) {
 
 router.get("/export", async (req, res) => {
   const filter = {};
-  if (req.query.videoId) filter.videoId = req.query.videoId;
   if (req.query.language) filter.language = req.query.language;
-  const words = await SavedWord.find(filter).sort({ createdAt: 1 });
+  const words = await SavedWord.find(filter).sort({ createdAt: 1 }).lean();
 
-  // Column order is the card layout: front, then reading, then meaning, then
-  // the sentence it came from. A card without the meaning column would send the
-  // learner back to a dictionary, which is the thing this is meant to avoid.
-  const rows = words.map((w) =>
-    [
+  // Column order is the card layout: front, reading, meaning, then the
+  // sentence it came from. A card without the meaning column would send the
+  // learner back to a dictionary, which is what this exists to avoid.
+  const rows = words.map((w) => {
+    const first = w.occurrences?.[0] || {};
+    return [
       ankiField(w.lemma),
-      ankiField(w.pinyin),
+      ankiField(w.pinyin || w.reading),
       ankiField(w.senses.join("; ")),
-      ankiField(w.sentence),
-      ankiField(w.sentenceEnglish),
-      ankiField(w.surface),
+      ankiField(first.sentence),
+      ankiField(first.sentenceTranslation),
       ankiField(w.pos),
-      w.start != null ? w.start.toFixed(2) : "",
-    ].join("\t"),
-  );
+      String(w.occurrences?.length || 0),
+    ].join("\t");
+  });
 
   res.setHeader("Content-Type", "text/tab-separated-values; charset=utf-8");
   res.setHeader("Content-Disposition", 'attachment; filename="vocabulary.tsv"');

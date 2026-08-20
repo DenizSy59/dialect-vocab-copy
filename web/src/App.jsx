@@ -38,6 +38,12 @@ export default function App() {
   const [view, setView] = useState("home"); // home | player | deck
   // Romanisation is a scaffold, so it is off by default and remembered. Leaving
   // it permanently on is a known way to never learn the script.
+  // One language at a time when you want it. Somebody studying Korean should
+  // not have Chinese decks and courses in the way, and "all" stays available
+  // for when they do want both.
+  const [studying, setStudying] = useState(
+    () => localStorage.getItem("lexicon.studying") || "all",
+  );
   const [showReading, setShowReading] = useState(
     () => localStorage.getItem("lexicon.reading") === "1",
   );
@@ -45,6 +51,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("lexicon.reading", showReading ? "1" : "0");
   }, [showReading]);
+
+  useEffect(() => {
+    localStorage.setItem("lexicon.studying", studying);
+  }, [studying]);
 
   const t = useMemo(() => makeT(uiLanguage), [uiLanguage]);
 
@@ -114,9 +124,20 @@ export default function App() {
 
   const savedLemmas = useMemo(() => new Set(words.map((w) => w.lemma)), [words]);
 
+  /* Clicking an already-saved word takes this encounter back out.
+   *
+   * Only the occurrence goes, not the card — the same word saved from another
+   * video keeps its clip. A misclick should be undoable without losing
+   * everything collected elsewhere.
+   */
   async function saveWord(segment, tokenIndex) {
+    const token = segment.tokens[tokenIndex];
     try {
-      await api.saveWord(selectedId, segment._id, tokenIndex);
+      if (token && savedLemmas.has(token.lemma)) {
+        await api.unsaveWord(selected?.language, token.lemma, segment._id);
+      } else {
+        await api.saveWord(selectedId, segment._id, tokenIndex);
+      }
       await refreshWords();
     } catch (e) {
       setError(e.message);
@@ -140,6 +161,19 @@ export default function App() {
         )}
 
         <span className="spacer" />
+
+        <select
+          className="chrome-select"
+          value={studying}
+          onChange={(e) => setStudying(e.target.value)}
+          title="Which language you are studying right now"
+        >
+          <option value="all">All languages</option>
+          <option value="ko">한국어</option>
+          <option value="zh">中文</option>
+          <option value="tr">Türkçe</option>
+          <option value="en">English</option>
+        </select>
 
         <button
           className={`toggle ${showReading ? "on" : ""}`}
@@ -205,7 +239,11 @@ export default function App() {
         )}
 
         {view === "course" ? (
-          <Curriculum uiLanguage={uiLanguage} onExit={() => setView("home")} />
+          <Curriculum
+            uiLanguage={uiLanguage}
+            studying={studying}
+            onExit={() => setView("home")}
+          />
         ) : view === "stream" ? (
           <StreamingPlayer
             platform={PLATFORMS.find((p) => p.id === source)}
@@ -228,7 +266,12 @@ export default function App() {
             }}
           />
         ) : view === "deck" ? (
-          <DeckLibrary t={t} uiLanguage={uiLanguage} onExit={() => setView("home")} />
+          <DeckLibrary
+            t={t}
+            uiLanguage={uiLanguage}
+            studying={studying}
+            onExit={() => setView("home")}
+          />
         ) : (
         <div className="columns">
           <div>

@@ -63,7 +63,14 @@ export const api = {
 
   deleteWord: (id) => fetch(`/api/words/${id}`, { method: "DELETE" }).then(json),
 
-  clipUrl: (wordId) => `/api/words/${wordId}/clip`,
+  clipUrl: (wordId, index = 0) => `/api/words/${wordId}/clip?i=${index}`,
+
+  unsaveWord: (language, lemma, segmentId, sentence) =>
+    fetch("/api/words/unsave", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ language, lemma, segmentId, sentence }),
+    }).then(json),
 
   tokenise: (text, language) =>
     fetch("/api/tokenise", {

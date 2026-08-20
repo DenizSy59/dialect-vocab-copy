@@ -309,9 +309,10 @@ function Quiz({ lang, level, onExit }) {
   );
 }
 
-export function Curriculum({ uiLanguage, onExit }) {
-  // null until a language is chosen, so the picker is the entry point.
-  const [lang, setLang] = useState(null);
+export function Curriculum({ uiLanguage, studying, onExit }) {
+  // When a study language is set, skip the picker entirely — that is the whole
+  // point of setting it.
+  const [lang, setLang] = useState(studying !== "all" ? studying : null);
   const [languages, setLanguages] = useState([]);
   const [levels, setLevels] = useState([]);
   const [level, setLevel] = useState(null);
@@ -335,6 +336,14 @@ export function Curriculum({ uiLanguage, onExit }) {
   useEffect(() => {
     loadLanguages();
   }, [loadLanguages]);
+
+  // Following the top-bar setting rather than keeping a separate idea of which
+  // language is active.
+  useEffect(() => {
+    setLang(studying !== "all" ? studying : null);
+    setLevel(null);
+    setQuiz(false);
+  }, [studying]);
 
   useEffect(() => {
     load();
@@ -381,6 +390,8 @@ export function Curriculum({ uiLanguage, onExit }) {
       levels={levels}
       onPick={setLevel}
       onBack={() => {
+        // With a study language set there is nothing to go back to.
+        if (studying !== "all") return onExit();
         setLang(null);
         loadLanguages(); // progress may have moved while inside
       }}
