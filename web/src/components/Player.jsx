@@ -86,7 +86,7 @@ function popoverPosition(rect) {
   };
 }
 
-function Tok({ run, token, language, saved, onSave }) {
+function Tok({ run, token, language, saved, onSave, showReading }) {
   const [pos, setPos] = useState(null);
   const ref = useRef(null);
   const clickable = Boolean(token && token.content);
@@ -104,7 +104,16 @@ function Tok({ run, token, language, saved, onSave }) {
       onMouseLeave={() => setPos(null)}
       onClick={() => onSave()}
     >
-      {run.text}
+      {/* Ruby, so the reading sits above the word and the line stays readable
+          at the same size whether it is on or off. */}
+      {showReading && token.reading ? (
+        <ruby>
+          {run.text}
+          <rt>{token.reading}</rt>
+        </ruby>
+      ) : (
+        run.text
+      )}
       {pos && (
         <span
           className={`pop ${pos.flipped ? "below" : ""}`}
@@ -135,6 +144,7 @@ function Tok({ run, token, language, saved, onSave }) {
 
 function SubtitleLine({
   segment, language, active, savedLemmas, onSeek, onSaveWord, showEnglish,
+  showReading,
 }) {
   const runs = useMemo(
     () => ownership(segment.text, segment.tokens || []),
@@ -158,6 +168,7 @@ function SubtitleLine({
               language={language}
               saved={Boolean(token && savedLemmas.has(token.lemma))}
               onSave={() => onSaveWord(segment, run.tokenIndex)}
+              showReading={showReading}
             />
           );
         })}
@@ -170,7 +181,7 @@ function SubtitleLine({
   );
 }
 
-export function Player({ video, segments, savedLemmas, onSaveWord }) {
+export function Player({ video, segments, savedLemmas, onSaveWord, showReading }) {
   const videoRef = useRef(null);
   const listRef = useRef(null);
   const [time, setTime] = useState(0);
@@ -283,6 +294,7 @@ export function Player({ video, segments, savedLemmas, onSaveWord }) {
             onSeek={seek}
             onSaveWord={onSaveWord}
             showEnglish={showEnglish}
+            showReading={showReading}
           />
         ))}
       </div>

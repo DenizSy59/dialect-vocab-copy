@@ -86,6 +86,7 @@ def store_result(video_id, result: dict) -> None:
                     "charStart": t["char_start"],
                     "charEnd": t["char_end"],
                     "content": t["content"],
+                    "reading": t.get("reading", ""),
                     "start": t["start"],
                     "end": t["end"],
                 }

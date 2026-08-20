@@ -36,6 +36,15 @@ export default function App() {
     () => localStorage.getItem("lexicon.ui") || "en",
   );
   const [view, setView] = useState("home"); // home | player | deck
+  // Romanisation is a scaffold, so it is off by default and remembered. Leaving
+  // it permanently on is a known way to never learn the script.
+  const [showReading, setShowReading] = useState(
+    () => localStorage.getItem("lexicon.reading") === "1",
+  );
+
+  useEffect(() => {
+    localStorage.setItem("lexicon.reading", showReading ? "1" : "0");
+  }, [showReading]);
 
   const t = useMemo(() => makeT(uiLanguage), [uiLanguage]);
 
@@ -133,6 +142,14 @@ export default function App() {
         <span className="spacer" />
 
         <button
+          className={`toggle ${showReading ? "on" : ""}`}
+          onClick={() => setShowReading((v) => !v)}
+          title="Show pronunciation above words (pinyin / romaja)"
+        >
+          あ
+        </button>
+
+        <button
           className={`toggle ${view === "course" ? "on" : ""}`}
           onClick={() => setView(view === "course" ? "home" : "course")}
         >
@@ -195,6 +212,7 @@ export default function App() {
             language={platformLanguage}
             onLanguage={setPlatformLanguage}
             onExit={() => setView("home")}
+            showReading={showReading}
             t={t}
           />
         ) : view === "home" ? (
@@ -226,6 +244,7 @@ export default function App() {
                 segments={segments}
                 savedLemmas={savedLemmas}
                 onSaveWord={saveWord}
+                showReading={showReading}
               />
             ) : (
               <div className="panel">

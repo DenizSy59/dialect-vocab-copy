@@ -1736,3 +1736,33 @@ label.field {
 .quiz-option.dim {
   opacity: 0.45;
 }
+
+/* ---------- Readings (pinyin / romaja) ---------- */
+
+/* Ruby keeps the reading above the word without pushing the line apart, which
+ * matters because the toggle should not reflow the whole transcript. */
+ruby {
+  ruby-position: over;
+}
+
+rt {
+  font-family: var(--font-mono);
+  font-size: 0.5em;
+  color: var(--text-faint);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  /* Without this the reading crowds the line above it at large subtitle sizes. */
+  line-height: 1.1;
+  user-select: none;
+}
+
+.sub-line.on rt,
+.tok.content:hover rt {
+  color: var(--text-dim);
+}
+
+/* Readings are a scaffold; they should never out-shout the word itself. */
+.tok.saved rt {
+  color: var(--emerald);
+  opacity: 0.75;
+}

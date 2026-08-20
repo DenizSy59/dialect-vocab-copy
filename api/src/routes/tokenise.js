@@ -41,6 +41,7 @@ router.post("/", async (req, res) => {
           charStart: t.char_start,
           charEnd: t.char_end,
           content: t.content,
+          reading: t.reading || "",
         };
         if (!t.content) return base;
         const entry = await lookup(language, t.lemma, t.surface);

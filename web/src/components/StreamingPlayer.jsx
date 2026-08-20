@@ -13,7 +13,7 @@ import { api } from "../api.js";
  * drawn onto the streaming page, so the words use our fonts, our theme and our
  * click handling, and the deck behaves exactly as it does for uploads.
  */
-export function StreamingPlayer({ platform, language, onLanguage, onExit, t }) {
+export function StreamingPlayer({ platform, language, onLanguage, onExit, t, showReading }) {
   const slotRef = useRef(null);
   const [line, setLine] = useState("");
   const [tokens, setTokens] = useState([]);
@@ -153,7 +153,7 @@ export function StreamingPlayer({ platform, language, onLanguage, onExit, t }) {
           <div className="stream-line">
             {tokens.length === 0
               ? line
-              : renderTokens(line, tokens, saved, save)}
+              : renderTokens(line, tokens, saved, save, showReading)}
           </div>
         )}
       </div>
@@ -175,7 +175,7 @@ export function StreamingPlayer({ platform, language, onLanguage, onExit, t }) {
  * duplicate text. Same approach as the transcript view — kiwi can return two
  * tokens pointing at one character, and rendering both prints it twice.
  */
-function renderTokens(text, tokens, saved, save) {
+function renderTokens(text, tokens, saved, save, showReading) {
   const owner = new Array(text.length).fill(-1);
   const ordered = tokens
     .map((t, i) => ({ t, i }))
@@ -206,7 +206,14 @@ function renderTokens(text, tokens, saved, save) {
           }
           onClick={() => clickable && save(token)}
         >
-          {slice}
+          {showReading && token?.reading ? (
+            <ruby>
+              {slice}
+              <rt>{token.reading}</rt>
+            </ruby>
+          ) : (
+            slice
+          )}
         </span>,
       );
       start = c;

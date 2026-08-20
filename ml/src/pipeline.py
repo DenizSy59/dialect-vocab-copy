@@ -18,6 +18,7 @@ from typing import Optional
 from lemmatise import get_tokeniser, Token
 from difficulty import score_all
 from dialect import detect, annotate_segments
+from romanise import add_readings
 from translate import translate_segments, build_translator
 
 
@@ -252,6 +253,8 @@ class Pipeline:
             spans = word_spans(text, words)
             tokens = self.tokenise(text)
             attach_timings(tokens, spans)
+            token_dicts = [t.to_dict() for t in tokens]
+            add_readings(token_dicts, self.language)
 
             for tok in tokens:
                 total += 1
@@ -270,7 +273,7 @@ class Pipeline:
                 "words": [{"word": w.get("word"), "start": w.get("start"),
                            "end": w.get("end"), "score": w.get("score")}
                           for w in words],
-                "tokens": [t.to_dict() for t in tokens],
+                "tokens": token_dicts,
             })
 
         # Difficulty needs the finished tokens, so it runs after the loop rather

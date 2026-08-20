@@ -22,6 +22,9 @@ const tokenSchema = new mongoose.Schema(
     charStart: Number,
     charEnd: Number,
     content: Boolean, // worth offering as vocabulary
+    // Romanisation, for a learner who cannot read the script yet. Empty for
+    // Latin-script languages, where it would just repeat the word.
+    reading: { type: String, default: "" },
     start: Number, // word timing, may be null if alignment missed it
     end: Number,
   },

@@ -26,6 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from lemmatise import get_tokeniser
+from romanise import add_readings
 
 _tokenisers = {}
 
@@ -44,6 +45,13 @@ def main():
             tokeniser_for(lang)
         except Exception:
             pass
+    # The Korean g2p model is the slowest thing here to load, so warm it now
+    # rather than stalling the first subtitle that needs a reading.
+    try:
+        from romanise import reading
+        reading("한국", "ko")
+    except Exception:
+        pass
 
     # Line-buffered, so the API sees each answer as soon as it is written
     # rather than when a buffer happens to fill.
@@ -62,6 +70,7 @@ def main():
         try:
             tk = tokeniser_for(req["language"])
             tokens = [t.to_dict() for t in tk(req["text"])]
+            add_readings(tokens, req["language"])
             print(json.dumps({"id": rid, "tokens": tokens}, ensure_ascii=False), flush=True)
         except Exception as e:
             print(json.dumps({"id": rid, "error": str(e)[:300]}, ensure_ascii=False), flush=True)
