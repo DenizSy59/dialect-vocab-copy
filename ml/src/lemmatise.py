@@ -53,6 +53,19 @@ JIEBA_CONTENT_TAGS = {
 KIWI_VERBAL_TAGS = {"VV", "VA", "VX", "VCP", "VCN"}
 
 
+def base_tag(tag: str) -> str:
+    """Strip kiwi's regular/irregular suffix.
+
+    Kiwi tags irregular predicates as VV-I and VA-I rather than VV and VA — 돕다,
+    듣다, 짓다, 곱다 and the rest of the ㅂ/ㄷ/ㅅ-irregular classes. Matching the
+    plain tags missed every one of them, so a large and very common group of
+    verbs was not clickable, never got its 다 lemma, and never merged with its
+    endings. 예뻤어요 worked and 도왔던 did not, which is exactly the shape of a
+    bug you find by accident.
+    """
+    return tag.split("-", 1)[0]
+
+
 @dataclass
 class Token:
     surface: str        # as it appears in the transcript
@@ -101,6 +114,48 @@ def merge_proper_nouns(tokens: List[Token]) -> List[Token]:
     return merged
 
 
+# Verbal endings. These belong to the verb form rather than standing alone, so
+# they are merged into the predicate they attach to.
+KIWI_ENDING_TAGS = {"EP", "EF", "EC", "ETM", "ETN"}
+
+
+def merge_predicates(tokens: List[Token], text: str) -> List[Token]:
+    """Put a verb back together with its endings.
+
+    Kiwi returns morphemes, so 먹었어요 arrives as 먹 + 었 + 어요 and 도왔던 as
+    돕 + 았 + 던. Displayed that way the subtitle reads as fragments, and the
+    romanisation was worse — a reading of "meok" floating over 먹 while 었어요 sat
+    beside it unannotated.
+
+    The merged surface is taken from the **original text span**, never by joining
+    the morphemes. 도왔던 is a contraction: concatenating its morphemes would
+    produce 돕았던, which is not what is on screen and would break the character
+    offsets that word timings depend on.
+
+    Particles are deliberately not merged. An ending is part of the verb; 을 in
+    밥을 is a separate word, and gluing it on would put it inside a vocabulary
+    item that should just be 밥.
+    """
+    merged: List[Token] = []
+    for tok in tokens:
+        prev = merged[-1] if merged else None
+        joinable = (
+            prev is not None
+            and prev.content
+            and prev.pos in KIWI_VERBAL_TAGS
+            and tok.pos in KIWI_ENDING_TAGS
+            # Contractions make morpheme spans overlap, so "starts at or before
+            # where the last one ended" is the right adjacency test.
+            and tok.char_start <= prev.char_end
+        )
+        if joinable:
+            prev.char_end = max(prev.char_end, tok.char_end)
+            prev.surface = text[prev.char_start:prev.char_end]
+            continue
+        merged.append(tok)
+    return merged
+
+
 class KoreanTokeniser:
     """kiwipiepy. Gives stems directly, so lemmatising is mostly adding 다."""
 
@@ -114,17 +169,18 @@ class KoreanTokeniser:
             lemma = t.form
             # Kiwi strips the ending off predicates and hands back the stem.
             # 먹었어요 -> 먹/VV, so the dictionary form needs 다 back on it.
-            if t.tag in KIWI_VERBAL_TAGS and not lemma.endswith("다"):
+            tag = base_tag(t.tag)
+            if tag in KIWI_VERBAL_TAGS and not lemma.endswith("다"):
                 lemma = lemma + "다"
             tokens.append(Token(
                 surface=t.form,
                 lemma=lemma,
-                pos=t.tag,
+                pos=tag,
                 char_start=t.start,
                 char_end=t.start + t.len,
-                content=t.tag in KIWI_CONTENT_TAGS,
+                content=tag in KIWI_CONTENT_TAGS,
             ))
-        return merge_proper_nouns(tokens)
+        return merge_predicates(merge_proper_nouns(tokens), text)
 
 
 class ChineseTokeniser:

@@ -147,3 +147,66 @@ class TestTurkishAmbiguity:
         # Parse order gave çöz, which is not a word worth saving.
         assert "çözüm" in lemmas(tr("Teknoloji çözümü getirir"))
         assert "çöz" not in lemmas(tr("Teknoloji çözümü getirir"))
+
+
+class TestIrregularVerbs:
+    """Kiwi tags irregular predicates VV-I, not VV.
+
+    Matching the plain tags missed the whole ㅂ/ㄷ/ㅅ-irregular class, so 돕다,
+    듣다 and 짓다 were unclickable and never got a dictionary form — while
+    regular verbs worked, which is what kept it hidden.
+    """
+
+    def test_p_irregular(self, ko):
+        assert "돕다" in lemmas(ko("도왔던 사람"))
+
+    def test_d_irregular(self, ko):
+        assert "듣다" in lemmas(ko("음악을 들었어요"))
+
+    def test_s_irregular(self, ko):
+        assert "짓다" in lemmas(ko("집을 지었다"))
+
+    def test_irregulars_are_clickable(self, ko):
+        assert any(t.content for t in ko("도왔던 사람") if t.lemma == "돕다")
+
+
+class TestPredicateMerging:
+    """A verb and its endings are one word on screen."""
+
+    def test_endings_join_the_stem(self, ko):
+        surfaces = [t.surface for t in ko("밥을 먹었어요")]
+        assert "먹었어요" in surfaces
+        assert "먹" not in surfaces, "the bare stem should not appear on its own"
+
+    def test_contraction_uses_the_text_not_the_morphemes(self, ko):
+        # 도왔던 is 돕 + 았 + 던. Joining morphemes would give 돕았던, which is not
+        # what is on screen and would break the offsets word timings rely on.
+        surfaces = [t.surface for t in ko("도왔던 사람")]
+        assert "도왔던" in surfaces
+        assert "돕았던" not in surfaces
+
+    def test_particles_are_left_alone(self, ko):
+        # An ending belongs to the verb; 을 is a separate word and gluing it on
+        # would bury 밥 inside a token that is not a vocabulary item.
+        surfaces = [t.surface for t in ko("밥을 먹었어요")]
+        assert "밥" in surfaces
+        assert "밥을" not in surfaces
+
+    def test_offsets_still_map_onto_the_text(self, ko):
+        text = "도왔던 사람이 밥을 먹었어요"
+        for t in ko(text):
+            assert text[t.char_start:t.char_end] == t.surface
+
+
+class TestClickableWordClasses:
+    """Pronouns, determiners and numerals are vocabulary too."""
+
+    def test_korean_pronouns(self, ko):
+        clickable = [t.surface for t in ko("저는 이것을 봤다") if t.content]
+        assert "저" in clickable
+        assert "이것" in clickable
+
+    def test_chinese_pronouns_and_adverbs(self, zh):
+        clickable = [t.surface for t in zh("我们一起去") if t.content]
+        assert "我们" in clickable
+        assert "一起" in clickable

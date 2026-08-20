@@ -878,3 +878,50 @@ have hidden every one of them.
   those sites.
 - **No frontend tests.** The React layer has had its share of bugs too — the
   ruby overlap, a prop name colliding with a state variable.
+
+### Korean irregular verbs were invisible
+
+Chasing the fragmented readings turned up something worse underneath. Kiwi tags
+irregular predicates **`VV-I`** and **`VA-I`**, not `VV` and `VA`. Every tag
+check in the project matched the plain forms, so the whole ㅂ/ㄷ/ㅅ-irregular
+class — 돕다, 듣다, 짓다, 곱다 and many more — was:
+
+- not clickable, so it could not be saved
+- never given its 다 dictionary form
+- never merged with its endings
+
+Regular verbs worked throughout, which is exactly why it stayed hidden: 예뻤어요
+behaved and 도왔던 did not, and nothing connected the two. Tags are now
+normalised by stripping the suffix before any comparison.
+
+| written | before | after |
+|---|---|---|
+| 도왔던 | 돕 · 었 · 던, no lemma | 도왔던 → 돕다 |
+| 들었어요 | 듣 · 었 · 어요, no lemma | 들었어요 → 듣다 |
+| 지었다 | 짓 · 었 · 다, no lemma | 지었다 → 짓다 |
+
+### Verbs are one word again
+
+Kiwi returns morphemes, so a predicate arrived split and the romanisation read
+as fragments — "meok" hovering over 먹 with 었어요 beside it unannotated. A verb
+and its endings now merge into a single token.
+
+The merged surface comes from the **original text span**, never from joining the
+morphemes: 도왔던 is a contraction of 돕 + 았 + 던, and concatenating would produce
+돕았던, which is not what is on screen and would break the character offsets word
+timings depend on. A test asserts exactly that.
+
+Particles are deliberately left alone. An ending belongs to the verb; 을 in 밥을
+is a separate word, and merging it would bury 밥 inside a token that is not a
+vocabulary item.
+
+Verified in stored data after re-transcribing: 큰 → 크다 (keun), 없었기 → 없다
+(eopsseotkki), 비쌌다 → 비싸다 (bissattta).
+
+### A process lesson
+
+The first re-transcription after the fix still produced the old output. The
+worker caches loaded modules for the life of the process, so source changes do
+nothing until it restarts — and the tests passed the whole time, because they
+import the module directly. Worth remembering before concluding a fix did not
+work.
