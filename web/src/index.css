@@ -1740,20 +1740,57 @@ label.field {
 /* ---------- Readings (pinyin / romaja) ---------- */
 
 /* Ruby keeps the reading above the word without pushing the line apart, which
- * matters because the toggle should not reflow the whole transcript. */
+ * matters because the toggle should not reflow the whole transcript.
+ *
+ * The margin is not decoration. Chinese is written without spaces, so adjacent
+ * words render flush against each other and their pinyin ran together into one
+ * unreadable string — bàogàojǐnggàochéng. A gap per word is what makes the
+ * readings parseable at all, and it also gives a long reading room over a
+ * short word.
+ */
 ruby {
-  ruby-position: over;
+  /* Stacked as a flex column rather than left as native ruby.
+   *
+   * Native ruby lets the annotation overhang its base, and with Chinese — no
+   * spaces between words, and pinyin far wider than the characters — adjacent
+   * readings overlapped each other by up to 46px. Measured, not guessed.
+   *
+   * As an inline-flex column the element is as wide as the wider of the two,
+   * so a long reading widens its own word instead of colliding with the next.
+   */
+  display: inline-flex;
+  flex-direction: column-reverse; /* base first in the DOM, reading on top */
+  align-items: center;
+  /* bottom, not baseline: a flex container has no useful baseline, so annotated
+   * words sat lower than plain ones and the line read as ragged. Aligning the
+   * boxes by their bottoms puts all the base text back on one line. */
+  vertical-align: bottom;
+  margin-inline: 3px;
 }
 
 rt {
+  display: block;
   font-family: var(--font-mono);
-  font-size: 0.5em;
+  font-size: 0.52em;
   color: var(--text-faint);
   font-weight: 400;
-  letter-spacing: 0.01em;
+  /* Never wrap a reading onto two lines; it stops looking like an annotation
+   * and starts looking like part of the sentence. */
+  white-space: nowrap;
   /* Without this the reading crowds the line above it at large subtitle sizes. */
-  line-height: 1.1;
+  line-height: 1.15;
+  padding-bottom: 2px;
   user-select: none;
+}
+
+/* Readings need vertical room the plain line does not. Applied only when they
+ * are on, so turning them off gives the tighter transcript back. */
+.sub-text:has(ruby) {
+  line-height: 2.5;
+}
+
+.stream-line:has(ruby) {
+  line-height: 2.4;
 }
 
 .sub-line.on rt,
