@@ -129,4 +129,43 @@ In CI: `.github/workflows/tests.yml` runs on every push. It starts MongoDB and R
 
 ## 8. Results
 
-*(Fill in after the CI runs: screenshot of the first run, what failed, the fix, screenshot of the green run.)*
+The workflow went red, red, then green: 9 bugs were found and fixed, and the final run passes 28 of 28 checks.
+
+| CI run | Result | What happened |
+|---|---|---|
+| #1 Adding Testing | Failed | The API crashed at startup on GitHub's clean machine: the Python tokeniser (`ml/.venv`) was missing and its spawn error had no handler. Found by CI itself. |
+| #2 Handle missing Python tokeniser | 18 passed, 10 failed | The server started. The 10 failures were 8 more real bugs (TC11 has 2 checks). |
+| #3 Fixing bugs found by tests | 28 passed, 0 failed | All bugs fixed. |
+
+### Bugs found and fixed
+
+| # | Bug | Found by | Fix |
+|---|---|---|---|
+| 0 | API crashed when Python was missing | CI run #1 | `error` handler on the tokeniser process (`api/src/tokeniser.js`) |
+| 1 | Malformed ID crashed the server (Express 4 does not catch errors in async routes) | TC11, TC14 | `router.param` checks `isValidObjectId` and returns 400 |
+| 2 | Opening `?word[x]=1` crashed the server | TC13 | Dictionary route accepts text only |
+| 3 | NoSQL injection deleted cards | TC12 | `language` and `lemma` must be plain text |
+| 4 | Unsave with no occurrence named deleted the whole card | TC15 | Requires `segmentId` or `sentence` |
+| 5 | Refused uploads stayed on disk | TC16 | File deleted before the 400 response |
+| 6 | Open CORS | TC17 | Origin allow-list (own app, extension, 5 streaming sites) |
+| 7 | API reachable from the whole network | TC18 | Listens on `127.0.0.1` (override with `HOST`) |
+| 8 | HTML accepted as a video and served as a web page | TC20 | Upload allow-list of video and audio extensions |
+
+TC19 (path traversal) and TC21 (login cookies in git) passed from the first run and stay as regression guards.
+
+### Manual test results
+
+| ID | Result | Notes |
+|---|---|---|
+| M1 | Passed | In Chrome the clip starts just before the sentence and the word is clearly audible. In VS Code's built-in browser it played silently, because that browser cannot play AAC audio; the file itself has audio (mean volume -24.4 dB). |
+| M2 | Failed (AI output) | In the 0:47 line, 발 (step) was translated as "shot" and 성적 (results) as "grades"; speech recognition probably heard 받게 instead of 밟게. |
+| M3 | Not run | Needs a real Netflix account in real Chrome. |
+| M4 | Passed (code review) | Login happens only on netflix.com; the extension only reads subtitle text and sends the word, sentence and page URL. |
+| M5 | Failed (open bug) | Found during exploratory testing: choosing a new subtitle language in the player does not change the translations on screen. |
+
+**Open bug (M5).** When a new subtitle language is picked, the player asks the API to translate the whole transcript. The old translations stay on screen until the new ones arrive, with only a small "translating…" label, and a first-time language can take up to 120 s. If the request fails or times out, the error is silently ignored (`.catch(() => {})` in `web/src/components/Player.jsx`), so the old language stays with no message. Likely cause, not yet confirmed. Proposed fix: clear the old translations when the language changes, and show an error when translation fails. Not fixed here, because it is outside the tested API feature.
+
+### Evidence
+
+- Test reports (JUnit XML): the `api-test-report` artifact of runs #2 (before) and #3 (after) in GitHub Actions.
+- Full write-up and reflection: the technical report submitted with this repository.
