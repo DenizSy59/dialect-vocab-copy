@@ -1,4 +1,5 @@
 import express from "express";
+import mongoose from "mongoose";
 import multer from "multer";
 import path from "node:path";
 import fs from "node:fs";
@@ -8,6 +9,20 @@ import { Segment } from "../models/Segment.js";
 import { enqueueTranscription } from "../queue.js";
 
 const router = express.Router();
+
+// FIX (TC11): reject malformed ids instead of crashing the server.
+router.param("id", (req, res, next, id) => {
+  if (!mongoose.isValidObjectId(id)) return res.status(400).json({ error: "invalid id" });
+  next();
+});
+
+// FIX (TC20): only accept video and audio files. Uploads keep their
+// extension and /media serves them back, so an uploaded .html would have run
+// as a real web page on the app's own address.
+const ALLOWED = new Set([
+  ".mp4", ".mkv", ".webm", ".mov", ".m4v", ".avi",
+  ".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac",
+]);
 
 fs.mkdirSync(config.uploadDir, { recursive: true });
 
@@ -24,6 +39,11 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
+  fileFilter: (req, file, cb) => {
+    const ok = ALLOWED.has(path.extname(file.originalname).toLowerCase());
+    if (!ok) req.fileRejected = true;
+    cb(null, ok);
+  },
   limits: { fileSize: 2 * 1024 * 1024 * 1024 }, // 2 GB
 });
 
@@ -32,12 +52,18 @@ const upload = multer({
 // this synchronously would just time out.
 router.post("/", upload.single("video"), async (req, res) => {
   try {
+    if (req.fileRejected) {
+      return res.status(400).json({ error: "only video or audio files can be uploaded" });
+    }
     if (!req.file) return res.status(400).json({ error: "no file uploaded" });
 
     // "auto" is the default: the worker detects the language from the audio,
     // which is a question the software can answer without asking.
     const language = req.body.language || "auto";
     if (!["ko", "zh", "tr", "auto"].includes(language)) {
+      // FIX (TC16): multer already saved the file before this check, so
+      // delete it, or every refused upload stays on disk forever.
+      await fs.promises.unlink(req.file.path).catch(() => {});
       return res.status(400).json({ error: "language must be ko, zh, tr or auto" });
     }
 

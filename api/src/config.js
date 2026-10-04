@@ -12,6 +12,8 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 
 export const config = {
   port: Number(process.env.PORT || 4000),
+  // Only this computer. Set HOST=0.0.0.0 on purpose to share on a network.
+  host: process.env.HOST || "127.0.0.1",
   mongoUri: process.env.MONGO_URI || "mongodb://127.0.0.1:27017/dialect_vocab",
   redis: {
     host: process.env.REDIS_HOST || "127.0.0.1",

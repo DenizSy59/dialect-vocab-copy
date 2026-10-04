@@ -1,4 +1,5 @@
 import express from "express";
+import mongoose from "mongoose";
 import path from "node:path";
 import { SavedWord } from "../models/SavedWord.js";
 import { Segment } from "../models/Segment.js";
@@ -8,6 +9,18 @@ import { cutClip } from "../clips.js";
 import { config } from "../config.js";
 
 const router = express.Router();
+
+// FIX (TC11): reject malformed ids before they reach MongoDB. A bad id made
+// findById throw, and in Express 4 an error thrown inside an async route is
+// not caught, so it stopped the whole server.
+router.param("id", (req, res, next, id) => {
+  if (!mongoose.isValidObjectId(id)) return res.status(400).json({ error: "invalid id" });
+  next();
+});
+
+// FIX (TC12, TC13): user input must be plain text. An object like
+// {"$ne": null} would otherwise be read by MongoDB as a query.
+const isText = (v) => typeof v === "string" && v.length > 0;
 
 /* Look a word up, trying progressively looser forms.
  *
@@ -142,8 +155,8 @@ router.post("/", async (req, res) => {
 router.post("/external", async (req, res) => {
   try {
     const { language, lemma, surface, pos, reading, sentence, source, sourceUrl } = req.body;
-    if (!language || !lemma) {
-      return res.status(400).json({ error: "language and lemma are required" });
+    if (!isText(language) || !isText(lemma)) {
+      return res.status(400).json({ error: "language and lemma are required, as text" });
     }
 
     const saved = await addOccurrence(
@@ -172,6 +185,14 @@ router.post("/external", async (req, res) => {
 router.post("/unsave", async (req, res) => {
   try {
     const { language, lemma, segmentId, sentence } = req.body;
+    if (!isText(language) || !isText(lemma)) {
+      return res.status(400).json({ error: "language and lemma are required, as text" });
+    }
+    // FIX (TC15): say WHICH occurrence to remove. With neither field the
+    // filter below removed every occurrence and deleted the whole card.
+    if (!isText(segmentId) && !isText(sentence)) {
+      return res.status(400).json({ error: "segmentId or sentence is required" });
+    }
     const word = await SavedWord.findOne({ language, lemma });
     if (!word) return res.json({ removed: false, remaining: 0 });
 
@@ -194,9 +215,17 @@ router.post("/unsave", async (req, res) => {
 });
 
 router.get("/", async (req, res) => {
+  const { language, videoId } = req.query;
+  // FIX (TC14): same crash as TC11, through the query string this time.
+  if (videoId !== undefined && !mongoose.isValidObjectId(videoId)) {
+    return res.status(400).json({ error: "invalid videoId" });
+  }
+  if (language !== undefined && typeof language !== "string") {
+    return res.status(400).json({ error: "invalid language" });
+  }
   const filter = {};
-  if (req.query.language) filter.language = req.query.language;
-  if (req.query.videoId) filter["occurrences.videoId"] = req.query.videoId;
+  if (language) filter.language = language;
+  if (videoId) filter["occurrences.videoId"] = videoId;
   const words = await SavedWord.find(filter).sort({ updatedAt: -1 }).lean();
   res.json(words);
 });
@@ -257,7 +286,7 @@ function ankiField(text) {
 
 router.get("/export", async (req, res) => {
   const filter = {};
-  if (req.query.language) filter.language = req.query.language;
+  if (typeof req.query.language === "string") filter.language = req.query.language;
   const words = await SavedWord.find(filter).sort({ createdAt: 1 }).lean();
 
   // Column order is the card layout: front, reading, meaning, then the

@@ -17,7 +17,24 @@ import translateRouter from "./routes/translate.js";
 
 const app = express();
 
-app.use(cors());
+// FIX (TC17): only the app's own pages, the browser extension, and the
+// streaming sites the extension runs on may call the API from a browser.
+// cors() with no options let EVERY website read and delete saved words.
+const ALLOWED_ORIGINS = [
+  /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/,
+  /^chrome-extension:\/\//,
+  /^https:\/\/www\.(netflix|primevideo|viki|iq|gagaoolala)\.com$/,
+];
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      // No Origin header: same-origin page, curl, the tests. Not a browser
+      // request from another website, so nothing to block.
+      if (!origin) return cb(null, true);
+      cb(null, ALLOWED_ORIGINS.some((re) => re.test(origin)));
+    },
+  }),
+);
 app.use(express.json());
 
 // One line per API call. Added while debugging whether the browser extension
@@ -95,7 +112,10 @@ if (fs.existsSync(webDist)) {
 
 async function main() {
   await connectDb();
-  app.listen(config.port, () => {
+  // FIX (TC18): listen on this computer only. With no address, Node listened
+  // on every network interface, so anyone on the same Wi-Fi could open the
+  // API, watch uploaded videos through /media, and delete saved words.
+  app.listen(config.port, config.host, () => {
     console.log(`api listening on http://localhost:${config.port}`);
   });
 }
