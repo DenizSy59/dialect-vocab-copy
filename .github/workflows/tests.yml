@@ -1,0 +1,84 @@
+# Runs the automated tests every time code is pushed or a pull request opens.
+#
+# Two jobs, side by side:
+#   api  – Saved Words tests (api/test/words.test.js) against real MongoDB + Redis
+#   web  – the frontend logic tests that were already in the project (vitest)
+#
+# The Python/Whisper tests are NOT run here: they need a GPU and several GB of
+# model weights, which GitHub's free runners do not have.
+
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+
+    # Real databases in throwaway containers, deleted after the run.
+    services:
+      mongo:
+        image: mongo:7
+        ports: ["27017:27017"]
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    steps:
+      # Full history, so TC21 can check that no commit ever had .chrome-profile.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+
+      - name: Install API dependencies
+        working-directory: api
+        run: npm ci
+
+      - name: Run Saved Words tests
+        working-directory: api
+        run: >-
+          node --test
+          --test-reporter=spec --test-reporter-destination=stdout
+          --test-reporter=junit --test-reporter-destination=test-results.xml
+          test/words.test.js
+
+      # Keep the test report even when tests fail, so it can be downloaded.
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-test-report
+          path: api/test-results.xml
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install web dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Run frontend logic tests
+        working-directory: web
+        run: npx vitest run
