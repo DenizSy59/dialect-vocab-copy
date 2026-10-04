@@ -70,6 +70,22 @@ function start() {
     if (/Traceback|Error/i.test(text)) console.error("tokeniser:", text.slice(0, 300));
   });
 
+
+  // If Python is missing (a fresh machine, or ml/.venv not set up yet), spawn
+  // fails with an "error" event. With no listener, Node treats that as a crash
+  // and takes the whole API down with it. Log it and carry on instead, so
+  // everything that does not need tokenising keeps working.
+  proc.on("error", (err) => {
+    console.error(`tokeniser could not start: ${err.message}`);
+    for (const [, entry] of pending) {
+      clearTimeout(entry.timer);
+      entry.reject(new Error("tokeniser is not available"));
+    }
+    pending.clear();
+    proc = null;
+  });
+  proc.stdin.on("error", () => {}); // writes to a dead process: already handled above
+  
   proc.on("exit", (code) => {
     console.error(`tokeniser exited (${code}) — restarting on next request`);
     for (const [, entry] of pending) {
